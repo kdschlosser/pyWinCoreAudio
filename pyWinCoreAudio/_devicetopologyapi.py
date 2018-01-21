@@ -130,7 +130,7 @@ class tagKSJACK_SINK_INFORMATION(ctypes.Structure):
         ('HDCPCapable', BOOL),
         ('AICapable', BOOL),
         ('SinkDescriptionLength', UCHAR),
-        ('SinkDescription[MAX_SINK_DESCRIPTION_NAME_LENGTH]', WCHAR),
+        ('SinkDescription', WCHAR),
         ('PortId', LUID),
     ]
 
@@ -270,7 +270,7 @@ class IAudioChannelConfig(comtypes.IUnknown):
             [],
             HRESULT,
             'GetChannelConfig',
-            (['out', 'retval'], LPDWORD, 'pdwConfig')
+            (['out'], LPDWORD, 'pdwConfig')
         )
     )
 
@@ -625,15 +625,15 @@ class IKsJackDescription(comtypes.IUnknown):
         COMMETHOD(
             [],
             HRESULT,
-            'GetJackDescription',
-            (['in'], UINT, 'nJack'),
-            (['out'], PKSJACK_DESCRIPTION, 'pDescription')
+            'GetJackCount',
+            (['out'], LPUINT, 'pcJacks')
         ),
         COMMETHOD(
             [],
             HRESULT,
-            'GetJackCount',
-            (['out'], LPUINT, 'pcJacks')
+            'GetJackDescription',
+            (['in'], UINT, 'nJack'),
+            (['out'], PKSJACK_DESCRIPTION, 'pDescription')
         )
     )
 

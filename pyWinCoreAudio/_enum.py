@@ -177,7 +177,7 @@ PEChannelMapping = POINTER(EChannelMapping)
 
 class EPcxConnectionType(enum):
     eConnTypeUnknown = 0
-    eConnTypeEighth = 1
+    eConnType3Point5mm = 1
     eConnTypeQuarter = 2
     eConnTypeAtapiInternal = 3
     eConnTypeRCA = 4
@@ -194,19 +194,21 @@ PEPcxConnectionType = POINTER(EPcxConnectionType)
 
 
 class EPcxGeoLocation(enum):
-    eGeoLocRear = 0
-    eGeoLocFront = 1
-    eGeoLocLeft = 2
-    eGeoLocRight = 3
-    eGeoLocTop = 4
-    eGeoLocBottom = 5
-    eGeoLocRearOPanel = 6
-    eGeoLocRiser = 7
-    eGeoLocInsideMobileLid = 8
-    eGeoLocDrivebay = 9
-    eGeoLocHDMI = 10
-    eGeoLocOutsideMobileLid = 11
-    eGeoLocATAPI = 12
+    eGeoLocRear = 1
+    eGeoLocFront = 2
+    eGeoLocLeft = 3
+    eGeoLocRight = 4
+    eGeoLocTop = 5
+    eGeoLocBottom = 6
+    eGeoLocRearPanel = 7
+    eGeoLocRiser = 8
+    eGeoLocInsideMobileLid = 9
+    eGeoLocDrivebay = 10
+    eGeoLocHDMI = 11
+    eGeoLocOutsideMobileLid = 12
+    eGeoLocATAPI = 13
+    eGeoLocNotApplicable = 14
+    eGeoLocReserved6 = 15
 
 
 PEPcxGeoLocation = POINTER(EPcxGeoLocation)

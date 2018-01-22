@@ -234,7 +234,9 @@ IID_MMDeviceAPILib = (
 IID_IAudioEndpointFormatControl = IID(
     '{784CFD40-9F89-456E-A1A6-873B006A664E}'
 )
-
+IID_AudioSes = (
+    '{00000000-0000-0000-0000-000000000000}'
+)
 IID_IActivateAudioInterfaceAsyncOperation = IID(
     '{72A22D78-CDE4-431D-B8CC-843A71199B6D}'
 )
@@ -318,6 +320,18 @@ IID_ISpatialAudioObjectForHrtf = IID(
 )
 IID_ISpatialAudioObjectRenderStreamForHrtf = IID(
     '{E08DEEF9-5363-406E-9FDC-080EE247BBE0}'
+)
+IID_IPolicyConfig = IID(
+    '{f8679f50-850a-41cf-9c72-430f290290c8}'
+)
+IID_IPolicyConfigVista = IID(
+    '{568b9108-44bf-40b4-9006-86afe5b5a620}'
+)
+CLSID_PolicyConfigClient = IID(
+    '{870af99c-171d-4f9e-af0d-e63df40c2bc9}'
+)
+CLSID_PolicyConfigVistaClient = IID(
+    '{294935CE-F637-4E7C-A41B-AB255460B862}'
 )
 CLSID_MMDeviceEnumerator = IID(
     '{BCDE0395-E52F-467C-8E3D-C4579291692E}'

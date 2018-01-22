@@ -53,7 +53,7 @@ class AUDIO_VOLUME_NOTIFICATION_DATA(ctypes.Structure):
         ('bMuted', BOOL),
         ('fMasterVolume', FLOAT),
         ('nChannels', UINT),
-        ('afChannelVolumes', FLOAT)
+        ('afChannelVolumes', (FLOAT * 8))
     ]
 
 
@@ -68,7 +68,7 @@ class IAudioEndpointVolumeCallback(comtypes.IUnknown):
             [],
             HRESULT,
             'OnNotify',
-            (['in'], PAUDIO_VOLUME_NOTIFICATION_DATA, 'sessionID')
+            (['in'], PAUDIO_VOLUME_NOTIFICATION_DATA, 'pNotify')
         ),
     )
 
@@ -251,9 +251,9 @@ class IAudioMeterInformation(comtypes.IUnknown):
         COMMETHOD(
             [],
             HRESULT,
-            'GetChannelsPeakValue',
+            'GetChannelsPeakValues',
             (['in'], UINT32, 'u32ChannelCount'),
-            (['out'], LPFLOAT, 'afPeakValues')
+            (['out'], (LPFLOAT * 8), 'afPeakValues')
         ),
         COMMETHOD(
             [],

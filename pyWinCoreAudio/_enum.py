@@ -152,6 +152,13 @@ class EndpointConnectorType(enum):
 
 PEndpointConnectorType = POINTER(EndpointConnectorType)
 
+class DeviceShareMode(enum):
+    DeviceShared = 0
+    DeviceExclusive = 1
+
+
+PDeviceShareMode = POINTER(DeviceShareMode)
+
 
 class AudioDeviceState(enum):
     Active = 0x1

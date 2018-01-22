@@ -1,10 +1,16 @@
 
 import comtypes
+import ctypes
 from _audioclient import PIAudioClient
 from _audiopolicy import PIAudioSessionManager2
+from _policyconfig import (
+    IPolicyConfigVista,
+)
+
 from _endpointvolumeapi import (
     PIAudioEndpointVolumeEx,
-    PIAudioMeterInformation
+    PIAudioMeterInformation,
+    IAudioEndpointVolumeCallback
 )
 from _mmdeviceapi import (
     IMMDeviceEnumerator,
@@ -68,6 +74,7 @@ from _iid import (
     IID_IKsJackDescription2,
     IID_IKsJackSinkInformation,
     CLSID_MMDeviceEnumerator,
+    CLSID_PolicyConfigVistaClient
 )
 from _constant import (
     PKEY_Device_FriendlyName,
@@ -192,7 +199,7 @@ E_ROLE = {
 }
 
 
-def GetRGB(triplet):
+def convert_triplet_to_rgb(triplet):
     if not triplet:
         return 0, 0, 0
 
@@ -467,6 +474,37 @@ EPCX_CONNECTION_TYPE = {
 }
 
 
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args):
+        if cls not in cls._instances:
+            cls._instances[cls] = {}
+
+        instances = cls._instances[cls]
+
+        for key, value in instances.items():
+            if key == args:
+                return value
+
+        instances[args] = super(
+            Singleton,
+            cls
+        ).__call__(*args)
+
+        # print '{'
+        #
+        # for key, value in cls._instances.items():
+        #     print '   ', repr(str(key)) + ': {'
+        #     for k, v in value.items():
+        #         k = ', '.join(repr(str(item)) for item in k)
+        #         print '        (' + k + '):', repr(str(v)) + ','
+        #     print '    },'
+        # print '}'
+
+        return instances[args]
+
+
 class JackDescription(object):
 
     def __init__(self, jack_description):
@@ -478,7 +516,7 @@ class JackDescription(object):
 
     @property
     def color(self):
-        return self.__jack_description.Color
+        return convert_triplet_to_rgb(self.__jack_description.Color)
 
     @property
     def type(self):
@@ -524,6 +562,28 @@ class AudioSpeakers(object):
         raise AttributeError
 
 
+class _EndpointVolumeCallback(comtypes.COMObject):
+    _com_interfaces_ = [IAudioEndpointVolumeCallback]
+
+    def __init__(self, endpoint, callback):
+        self.__endpoint = endpoint
+        self.__callback = callback
+        comtypes.COMObject.__init__(self)
+
+    def OnNotify(self, pNotify):
+        mute = bool(pNotify.contents.bMuted)
+        master_volume = pNotify.contents.fMasterVolume
+        num_channels = pNotify.contents.nChannels
+        pfChannelVolumes = ctypes.cast(
+            pNotify.contents.afChannelVolumes,
+            ctypes.POINTER(ctypes.c_float)
+        )
+        channel_volumes = list(
+            pfChannelVolumes[i] for i in range(num_channels)
+        )
+        self.__callback(self.__endpoint, master_volume, channel_volumes, mute)
+
+
 class _NotificationClient(comtypes.COMObject):
     _com_interfaces_ = [IMMNotificationClient]
 
@@ -532,8 +592,24 @@ class _NotificationClient(comtypes.COMObject):
         self.__callbacks = callbacks
         comtypes.COMObject.__init__(self)
 
+    def __get_device(self, device_id):
+        device = self.__device_enum.get_device(device_id)
+        device_topology = comtypes.cast(
+            device.Activate(
+                IID_IDeviceTopology,
+                CLSCTX_INPROC_SERVER
+            ),
+            PIDeviceTopology
+        )
+
+        return AudioDevice(
+            device_topology.GetDeviceId(),
+            self.__device_enum
+        )
+
     def OnDeviceStateChanged(self, pwstrDeviceId, dwNewState):
-        device = self.__device_enum.GetDevice(pwstrDeviceId)
+        device = self.__get_device(pwstrDeviceId)
+
         state = AUDIO_DEVICE_STATE[dwNewState]
         for callback in self.__callbacks['state']:
             callback(device, state)
@@ -545,21 +621,21 @@ class _NotificationClient(comtypes.COMObject):
         # )
 
     def OnDeviceAdded(self, pwstrDeviceId):
-        device = self.__device_enum.GetDevice(pwstrDeviceId)
+        device = self.__get_device(pwstrDeviceId)
         for callback in self.__callbacks['add']:
             callback(device)
 
         # print 'OnDeviceAdded', 'pwstrDeviceId:', pwstrDeviceId
 
     def OnDeviceRemoved(self, pwstrDeviceId):
-        device = self.__device_enum.GetDevice(pwstrDeviceId)
+        device = self.__get_device(pwstrDeviceId)
         for callback in self.__callbacks['remove']:
             callback(device)
 
         # print 'OnDeviceRemoved', 'pwstrDeviceId:', pwstrDeviceId
 
     def OnDefaultDeviceChanged(self, _, __, pwstrDefaultDeviceId):
-        device = self.__device_enum.GetDevice(pwstrDefaultDeviceId)
+        device = self.__get_device(pwstrDefaultDeviceId)
         for callback in self.__callbacks['default']:
             callback(device)
 
@@ -571,7 +647,7 @@ class _NotificationClient(comtypes.COMObject):
         # )
 
     def OnPropertyValueChanged(self, pwstrDeviceId, key):
-        device = self.__device_enum.GetDevice(pwstrDeviceId)
+        device = self.__get_device(pwstrDeviceId)
         for callback in self.__callbacks['property']:
             callback(device, key)
         # print (
@@ -701,10 +777,21 @@ class AudioPart(object):
 
 
 class AudioVolume(object):
+    __metaclass__ = Singleton
 
-    def __init__(self, volume, endpoint):
-        self.__volume = volume
+    def __init__(self, endpoint):
         self.__endpoint = endpoint
+        self.__volume = endpoint.activate(
+            IID_IAudioEndpointVolumeEx,
+            PIAudioEndpointVolumeEx
+        )
+        support = self.__volume.QueryHardwareSupport()
+        if support | ENDPOINT_HARDWARE_SUPPORT_VOLUME != support:
+            raise NotImplementedError
+
+    @property
+    def endpoint(self):
+        return self.__endpoint
 
     @property
     def channel_count(self):
@@ -782,31 +869,48 @@ class AudioVolume(object):
     def step(self):
         return self.__volume.GetVolumeStepInfo()
 
+    def register_volume_change_callback(self, callback):
+        volume_callback = _EndpointVolumeCallback(self.__endpoint, callback)
+        self.__volume.RegisterControlChangeNotify(volume_callback)
+        return volume_callback
+
+    def unregister_volume_change_callback(self, callback):
+        self.__volume.UnregisterControlChangeNotify(callback)
+
     def up(self):
         self.__volume.VolumeStepUp()
 
     def down(self):
         self.__volume.VolumeStepDown()
 
+    @property
     def peak_meter(self):
-        peak_meter = self.__endpoint.activate(
-            IID_IAudioMeterInformation,
-            PIAudioMeterInformation
-        )
-
-        support = peak_meter.QueryHardwareSupport()
-        if support | ENDPOINT_HARDWARE_SUPPORT_METER == support:
-            return AudioPeakMeter(peak_meter)
+        return AudioPeakMeter(self.__endpoint)
 
 
 class AudioPeakMeter(object):
 
-    def __init__(self, peak_meter):
-        self.__peak_meter = peak_meter
+    def __init__(self, endpoint):
+        self.__peak_meter = endpoint.activate(
+            IID_IAudioMeterInformation,
+            PIAudioMeterInformation
+        )
 
     @property
     def channel_peak_values(self):
-        return self.__peak_meter.GetChannelsPeakValues(self.channel_count)
+
+        # support = self.__peak_meter.QueryHardwareSupport()
+        # if support | ENDPOINT_HARDWARE_SUPPORT_METER != support:
+            # raise NotImplementedError
+        channels = self.__peak_meter.GetChannelsPeakValues(self.channel_count)
+
+        channel_peaks = ctypes.cast(
+            channels,
+            ctypes.POINTER(ctypes.c_float)
+        )
+        return list(
+            channel_peaks[i] for i in range(self.channel_count)
+        )
 
     @property
     def channel_count(self):
@@ -875,10 +979,19 @@ class AudioJackSinkInformation(object):
 
 
 class AudioEndpoint(object):
-    def __init__(self, device_enum, endpoint_enum, endpoint):
+    __metaclass__ = Singleton
+
+    def __init__(
+        self,
+        parent,
+        endpoint_id,
+        device_enum
+    ):
+        self.__parent = parent
+        self.__endpoint_id = endpoint_id
         self.__device_enum = device_enum
-        self.__endpoint_enum = endpoint_enum
-        self.__endpoint = endpoint
+        self.__endpoint = self.__device_enum.get_device(endpoint_id)
+        self.activate = self.__activate
 
     @property
     def __device_topology(self):
@@ -952,6 +1065,30 @@ class AudioEndpoint(object):
 
             if not conn_from.is_connected:
                 raise AttributeError
+
+    def set_default(self):
+
+        self.__device_enum = comtypes.CoCreateInstance(
+            CLSID_MMDeviceEnumerator,
+            IMMDeviceEnumerator,
+            comtypes.CLSCTX_INPROC_SERVER
+        )
+
+        policy_config = comtypes.CoCreateInstance(
+            CLSID_PolicyConfigVistaClient,
+            IPolicyConfigVista,
+            comtypes.CLSCTX_ALL
+        )
+
+        policy_config.SetDefaultEndpoint(self.id, ERole.eMultimedia)
+
+    @property
+    def device(self):
+        return self.__parent
+
+    @property
+    def id(self):
+        return self.__endpoint_id
 
     @property
     def audio_client(self):
@@ -1121,14 +1258,10 @@ class AudioEndpoint(object):
 
     @property
     def volume(self):
-        volume = self.__activate(
-            IID_IAudioEndpointVolumeEx,
-            PIAudioEndpointVolumeEx
-        )
-        support = volume.QueryHardwareSupport()
-        if support | ENDPOINT_HARDWARE_SUPPORT_VOLUME == support:
-            return AudioVolume(volume, self.__endpoint)
-        raise AttributeError
+        try:
+            return AudioVolume(self)
+        except NotImplementedError:
+            raise AttributeError
 
     @property
     def format_support(self):
@@ -1147,18 +1280,21 @@ class AudioEndpoint(object):
         #
         #     return None
 
+    @property
+    def is_default(self):
+        return AudioDefaultEndpoint(self.__device_enum, self.data_flow) == self
+
 
 class AudioDevice(object):
+    __metaclass__ = Singleton
 
-    def __init__(self, dev_id, device_enum, data_flow):
-
-        self.__device_enum = device_enum
+    def __init__(self, dev_id, device_enum):
         self.__id = dev_id
-        self.__data_flow = data_flow
+        self.__device_enum = device_enum
 
     @property
     def __device(self):
-        return self.__device_enum.GetDevice(self.__id)
+        return self.__device_enum.get_device(self.__id)
 
     @property
     def __device_topology(self):
@@ -1173,13 +1309,7 @@ class AudioDevice(object):
     @property
     def __connectors(self):
         name = self.name
-        endpoint_enum = self.__device_enum.EnumAudioEndpoints(
-            self.__data_flow,
-            DEVICE_STATE_MASK_ALL
-        )
-
-        for i in range(endpoint_enum.GetCount()):
-            endpoint = endpoint_enum.Item(i)
+        for endpoint in self.__device_enum.endpoints:
 
             pStore = endpoint.OpenPropertyStore(STGM_READ)
             try:
@@ -1232,10 +1362,7 @@ class AudioDevice(object):
         return list(self.__endpoints(EDataFlow.eCapture))
 
     def __endpoints(self, data_flow):
-        endpoint_enum = self.__device_enum.EnumAudioEndpoints(
-            data_flow,
-            DEVICE_STATE_MASK_ALL
-        )
+        endpoint_enum = self.__device_enum.endpoint_enum(data_flow)
         device_name = self.name
 
         for i in range(endpoint_enum.GetCount()):
@@ -1249,13 +1376,105 @@ class AudioDevice(object):
 
             if name == device_name:
                 yield AudioEndpoint(
-                    self.__device_enum,
-                    endpoint_enum,
-                    endpoint
+                    self,
+                    endpoint.GetId(),
+                    self.__device_enum
                 )
 
     def __iter__(self):
         return iter(self.__endpoints(EDataFlow.eAll))
+
+
+class AudioDefaultEndpoint(object):
+
+    def __init__(self, device_enum, data_flow):
+        self.__device_enum = device_enum
+        self.__data_flow = data_flow
+
+    @property
+    def data_flow(self):
+        return self.__data_flow
+
+    @property
+    def __default_endpoint(self):
+        endpoint = self.__device_enum.default_endpoint(self.__data_flow)
+
+        device_topology = comtypes.cast(
+            endpoint.Activate(
+                IID_IDeviceTopology,
+                CLSCTX_INPROC_SERVER
+            ),
+            PIDeviceTopology
+        )
+
+        device = AudioDevice(
+            device_topology.GetDeviceId(),
+            self.__device_enum
+        )
+
+        endpoint_id = endpoint.GetId()
+
+        for endpoint in device:
+            if endpoint.id == endpoint_id:
+                return endpoint
+
+    def __eq__(self, other):
+        return other == self.__default_endpoint
+
+    def __getattr__(self, item):
+        if item in self.__dict__:
+            return self.__dict__[item]
+
+        endpoint = self.__default_endpoint
+        if endpoint is not None:
+            return getattr(endpoint, item)
+
+        raise AttributeError
+
+
+class AudioDeviceEnumerator(object):
+
+    def __init__(self):
+        self.__device_enum = comtypes.CoCreateInstance(
+            CLSID_MMDeviceEnumerator,
+            IMMDeviceEnumerator,
+            comtypes.CLSCTX_INPROC_SERVER
+        )
+
+    def register_endpoint_notification_callback(self, client):
+        self.__device_enum.RegisterEndpointNotificationCallback(
+            client
+        )
+
+    def unregister_endpoint_notification_callback(self, client):
+        self.__device_enum.UnregisterEndpointNotificationCallback(
+            client
+        )
+
+    def default_endpoint(self, data_flow):
+        return self.__device_enum.GetDefaultAudioEndpoint(
+            data_flow,
+            ERole.eMultimedia
+        )
+
+    def get_device(self, device_id):
+        return self.__device_enum.GetDevice(device_id)
+
+    @property
+    def endpoints(self):
+        endpoint_enum = self.__device_enum.EnumAudioEndpoints(
+            EDataFlow.eAll,
+            DEVICE_STATE_MASK_ALL
+        )
+
+        for i in range(endpoint_enum.GetCount()):
+            yield endpoint_enum.Item(i)
+
+    def endpoint_enum(self, data_flow):
+        return self.__device_enum.EnumAudioEndpoints(
+            data_flow,
+            DEVICE_STATE_MASK_ALL
+        )
 
 
 class AudioDevices(object):
@@ -1270,46 +1489,35 @@ class AudioDevices(object):
             remove=[],
             add=[]
         )
-
-        self.__device_enum = comtypes.CoCreateInstance(
-            CLSID_MMDeviceEnumerator,
-            IMMDeviceEnumerator,
-            comtypes.CLSCTX_INPROC_SERVER
-        )
+        self.__device_enum = AudioDeviceEnumerator()
 
         self.__notification_client = _NotificationClient(
             self.__device_enum,
             self.__callbacks
         )
-        self.__device_enum.RegisterEndpointNotificationCallback(
+        self.__device_enum.register_endpoint_notification_callback(
             self.__notification_client
         )
 
     def bind(self, notification, callback):
-        self.__callbacks[notification] += callback
+        self.__callbacks[notification] += [callback]
 
     def unbind(self, notification, callback):
         self.__callbacks[notification].remove(callback)
 
     @property
-    def render_devices(self):
-        return list(self.__devices(EDataFlow.eRender))
+    def default_render_endpoint(self):
+        return AudioDefaultEndpoint(self.__device_enum, EDataFlow.eRender)
 
     @property
-    def capture_devices(self):
-        return list(self.__devices(EDataFlow.eCapture))
+    def default_capture_endpoint(self):
+        return AudioDefaultEndpoint(self.__device_enum, EDataFlow.eCapture)
 
-    def __devices(self, data_flow):
-        endpoint_enum = self.__device_enum.EnumAudioEndpoints(
-            data_flow,
-            DEVICE_STATE_MASK_ALL
-        )
-
+    @property
+    def __devices(self):
         used_names = []
 
-        for i in range(endpoint_enum.GetCount()):
-            endpoint = endpoint_enum.Item(i)
-
+        for endpoint in self.__device_enum.endpoints:
             pStore = endpoint.OpenPropertyStore(STGM_READ)
             try:
                 name = pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
@@ -1328,13 +1536,18 @@ class AudioDevices(object):
 
                 yield AudioDevice(
                     device_topology.GetDeviceId(),
-                    self.__device_enum,
-                    data_flow
+                    self.__device_enum
                 )
 
     def __iter__(self):
-        for device in self.__devices(EDataFlow.eAll):
+        for device in self.__devices:
             yield device
+
+    def __contains__(self, item):
+        for device in self:
+            if item in (device.name, device.id):
+                return True
+        return False
 
     def __getitem__(self, item):
         if isinstance(item, (slice, int)):

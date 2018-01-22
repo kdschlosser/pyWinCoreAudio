@@ -38,7 +38,6 @@ from ctypes.wintypes import (
     LPWSTR,
     LPCWSTR,
     WCHAR,
-    LPVOID,
 )
 
 

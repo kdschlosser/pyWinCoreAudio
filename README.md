@@ -1,5 +1,8 @@
 pyWinCoreAudio
 ==============
+This library is an expanded and refined version of the AudioEndpoint
+library by jonisb https://github.com/jonisb/AudioEndpointControl.
+I want to thank him for the inspiration.
 
 This is a work in progress. If there is anyone willing to help out.
 Please by all means submit some PR's

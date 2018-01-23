@@ -130,7 +130,7 @@ class tagKSJACK_SINK_INFORMATION(ctypes.Structure):
         ('HDCPCapable', BOOL),
         ('AICapable', BOOL),
         ('SinkDescriptionLength', UCHAR),
-        ('SinkDescription', WCHAR),
+        ('SinkDescription', (WCHAR * 32)),
         ('PortId', LUID),
     ]
 
@@ -141,8 +141,8 @@ PKSJACK_SINK_INFORMATION = POINTER(KSJACK_SINK_INFORMATION)
 
 class tagKSJACK_DESCRIPTION2(ctypes.Structure):
     _fields_ = [
-        ('DWORD', KSJACK_SINK_CONNECTIONTYPE),
-        ('DWORD', WORD)
+        ('DeviceStateInfo', DWORD),
+        ('JackCapabilities', DWORD)
     ]
 
 
@@ -648,16 +648,16 @@ class IKsJackDescription2(comtypes.IUnknown):
         COMMETHOD(
             [],
             HRESULT,
-            'GetJackDescription2',
-            (['in'], UINT, 'nJack'),
-            (['out'], PKSJACK_DESCRIPTION2, 'pDescription2')
+            'GetJackCount',
+            (['out'], LPUINT, 'pcJacks')
         ),
         COMMETHOD(
             [],
             HRESULT,
-            'GetJackCount',
-            (['out'], LPUINT, 'pcJacks')
-        )
+            'GetJackDescription2',
+            (['in'], UINT, 'nJack'),
+            (['out'], PKSJACK_DESCRIPTION2, 'pDescription2')
+        ),
     )
 
 

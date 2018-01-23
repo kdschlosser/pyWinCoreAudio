@@ -29,6 +29,7 @@ from _enum import (
     EPcxGeoLocation,
     EPcxGenLocation,
     EPxcPortConnection,
+    EChannelMapping,
     KSJACK_SINK_CONNECTIONTYPE
 )
 from _devicetopologyapi import (
@@ -106,6 +107,8 @@ from _constant import (
     KSAUDIO_SPEAKER_7POINT1,
     KSAUDIO_SPEAKER_5POINT1_SURROUND,
     KSAUDIO_SPEAKER_7POINT1_SURROUND,
+    JACKDESC2_PRESENCE_DETECT_CAPABILITY,
+    JACKDESC2_DYNAMIC_FORMAT_CHANGE_CAPABILITY
 )
 
 CLSCTX_INPROC_SERVER = comtypes.CLSCTX_INPROC_SERVER
@@ -420,56 +423,131 @@ KSAUDIO_SPEAKER = {
     )
 }
 
+CHANNEL_MAPPING = {
+    EChannelMapping.ePcxChanMap_FL_FR: (
+        KSAUDIO_SPEAKER[KSAUDIO_SPEAKER_STEREO]
+    ),
+    EChannelMapping.ePcxChanMap_FC_LFE: (
+        KSAUDIO_SPEAKER[KSAUDIO_SPEAKER_1POINT1]
+    ),
+    EChannelMapping.ePcxChanMap_FLC_FRC: (
+        KSAUDIO_SPEAKER[KSAUDIO_SPEAKER_3POINT0]
+    ),
+    EChannelMapping.ePcxChanMap_BL_BR: dict(
+        front_left=False,
+        front_right=False,
+        center=False,
+        high_left=False,
+        high_right=False,
+        side_left=False,
+        side_right=False,
+        back_left=True,
+        back_right=True,
+        back_center=False,
+        subwoofer=False,
+        string='Back left & right'
+    ),
+
+    EChannelMapping.ePcxChanMap_SL_SR: dict(
+        front_left=False,
+        front_right=False,
+        center=False,
+        high_left=False,
+        high_right=False,
+        side_left=True,
+        side_right=True,
+        back_left=False,
+        back_right=False,
+        back_center=False,
+        subwoofer=False,
+        string='Side left & right'
+    ),
+    EChannelMapping.ePcxChanMap_Unknown: dict(
+        front_left=False,
+        front_right=False,
+        center=False,
+        high_left=False,
+        high_right=False,
+        side_left=False,
+        side_right=False,
+        back_left=False,
+        back_right=False,
+        back_center=False,
+        subwoofer=False,
+        string='Unknown'
+    ),
+}
+
 EPCX_PORT_CONNECTION = {
-    EPxcPortConnection.ePortConnIntegratedDevice:      'Integrated',
-    EPxcPortConnection.ePortConnJack:                  'Physical',
+    EPxcPortConnection.ePortConnJack:                  'Jack',
     EPxcPortConnection.ePortConnUnknown:               'Unknown',
+    EPxcPortConnection.ePortConnIntegratedDevice:      (
+        'Slot for an integrated device'
+    ),
     EPxcPortConnection.ePortConnBothIntegratedAndJack: (
-        'Integrated and Physical'
+        'Both a jack and a slot for an integrated device'
     )
 }
 
 EPCX_GEN_LOCATION = {
-    EPcxGenLocation.eGenLocInternal:   'Internal',
-    EPcxGenLocation.eGenLocOther:      'Other',
-    EPcxGenLocation.eGenLocPrimaryBox: 'Primary Box',
-    EPcxGenLocation.eGenLocSeparate:   'Separate'
+    EPcxGenLocation.eGenLocInternal:   'Inside primary chassis',
+    EPcxGenLocation.eGenLocOther:      'Other location',
+    EPcxGenLocation.eGenLocPrimaryBox: 'On primary chassis',
+    EPcxGenLocation.eGenLocSeparate:   'On separate chassis'
 }
 
 EPCX_GEO_LOCATION = {
-    EPcxGeoLocation.eGeoLocRear:             'Rear',
-    EPcxGeoLocation.eGeoLocFront:            'Front',
-    EPcxGeoLocation.eGeoLocLeft:             'Left',
-    EPcxGeoLocation.eGeoLocRight:            'Right',
-    EPcxGeoLocation.eGeoLocTop:              'Top',
-    EPcxGeoLocation.eGeoLocBottom:           'Bottom',
-    EPcxGeoLocation.eGeoLocRearPanel:        'Rear Panel',
-    EPcxGeoLocation.eGeoLocRiser:            'Riser',
-    EPcxGeoLocation.eGeoLocInsideMobileLid:  'Inside Mobile Lid',
-    EPcxGeoLocation.eGeoLocDrivebay:         'Drive Bay',
-    EPcxGeoLocation.eGeoLocHDMI:             'HDMI',
-    EPcxGeoLocation.eGeoLocOutsideMobileLid: 'Outside Mobile Lid',
-    EPcxGeoLocation.eGeoLocATAPI:            'ATAPI',
+    EPcxGeoLocation.eGeoLocRear:             'Rear-mounted panel',
+    EPcxGeoLocation.eGeoLocFront:            'Front-mounted panel',
+    EPcxGeoLocation.eGeoLocLeft:             'Left-mounted panel',
+    EPcxGeoLocation.eGeoLocRight:            'Right-mounted panel',
+    EPcxGeoLocation.eGeoLocTop:              'Top-mounted panel',
+    EPcxGeoLocation.eGeoLocBottom:           'Bottom-mounted panel',
+    EPcxGeoLocation.eGeoLocRiser:            'Riser card',
+    EPcxGeoLocation.eGeoLocInsideMobileLid:  'Inside lid of mobile computer',
+    EPcxGeoLocation.eGeoLocDrivebay:         'Drive bay',
+    EPcxGeoLocation.eGeoLocHDMI:             'HDMI connector',
+    EPcxGeoLocation.eGeoLocOutsideMobileLid: 'Outside lid of mobile computer',
+    EPcxGeoLocation.eGeoLocATAPI:            'ATAPI connector',
     EPcxGeoLocation.eGeoLocNotApplicable:    'Not Applicable',
-    EPcxGeoLocation.eGeoLocReserved6:        'Reserved'
+    EPcxGeoLocation.eGeoLocReserved6:        'Reserved',
+    EPcxGeoLocation.eGeoLocRearPanel:        (
+        'Rear slide-open or pull-open panel'
+    ),
+    EPcxGeoLocation.eGeoLocRearOPanel:       (
+        'Rear slide-open or pull-open panel'
+    )
 }
 
 EPCX_CONNECTION_TYPE = {
     EPcxConnectionType.eConnTypeUnknown:               'Unknown',
-    EPcxConnectionType.eConnTypeQuarter:               '6.35mm (1/4" Phono)',
-    EPcxConnectionType.eConnTypeAtapiInternal:         'ATAPI',
-    EPcxConnectionType.eConnTypeRCA:                   'RCA',
-    EPcxConnectionType.eConnTypeOptical:               'Optical',
-    EPcxConnectionType.eConnTypeOtherDigital:          'Other Digital',
-    EPcxConnectionType.eConnTypeOtherAnalog:           'Analog',
-    EPcxConnectionType.eConnTypeXlrProfessional:       'Xlr',
-    EPcxConnectionType.eConnTypeRJ11Modem:             'RJ11 (Modem)',
-    EPcxConnectionType.eConnTypeCombination:           'Combination',
+    EPcxConnectionType.eConnTypeRCA:                   'RCA jack',
+    EPcxConnectionType.eConnTypeOptical:               'Optical connector',
+    EPcxConnectionType.eConnTypeXlrProfessional:       'XLR connector',
+    EPcxConnectionType.eConnTypeRJ11Modem:             'RJ11 modem connector',
+    EPcxConnectionType.eConnTypeQuarter:               (
+        '6.35mm (1/4" Phono) jack'
+    ),
+    EPcxConnectionType.eConnTypeOtherDigital:          (
+        'Generic digital connector'
+    ),
+    EPcxConnectionType.eConnTypeOtherAnalog:           (
+        'Generic analog connector'
+    ),
+    EPcxConnectionType.eConnTypeAtapiInternal:         (
+        'ATAPI internal connector'
+    ),
+    EPcxConnectionType.eConnTypeCombination:           (
+        'Combination of connector types'
+    ),
     EPcxConnectionType.eConnType3Point5mm:             (
-        '3.5mm (1\8" Headphone)'
+        '3.5mm (1\8" Headphone) jack'
+    ),
+    EPcxConnectionType.eConnTypeEighth:                (
+        '3.5mm (1\8" Headphone) jack'
     ),
     EPcxConnectionType.eConnTypeMultichannelAnalogDIN: (
-        'Multichannel Analog (DIN)'
+        'Multichannel analog DIN connector'
     )
 }
 
@@ -507,8 +585,9 @@ class Singleton(type):
 
 class JackDescription(object):
 
-    def __init__(self, jack_description):
+    def __init__(self, jack_description, jack_description2):
         self.__jack_description = jack_description
+        self.__jack_description2 = jack_description2
 
     @property
     def channel_mapping(self):
@@ -537,6 +616,28 @@ class JackDescription(object):
     @property
     def is_connected(self):
         return bool(self.__jack_description.IsConnected)
+
+    @property
+    def presence_detection(self):
+        if self.__jack_description2 is None:
+            raise AttributeError
+
+        return (
+            self.__jack_description2.JackCapabilities |
+            JACKDESC2_PRESENCE_DETECT_CAPABILITY ==
+            self.__jack_description2.JackCapabilities
+        )
+
+    @property
+    def dynamic_format_change(self):
+        if self.__jack_description2 is None:
+            raise AttributeError
+
+        return (
+            self.__jack_description2.JackCapabilities |
+            JACKDESC2_DYNAMIC_FORMAT_CHANGE_CAPABILITY ==
+            self.__jack_description2.JackCapabilities
+        )
 
 
 class AudioSpeakers(object):
@@ -1169,29 +1270,41 @@ class AudioEndpoint(object):
         except comtypes.COMError:
             raise AttributeError
 
+        try:
+            jack_description2 = part.activate(
+                IID_IKsJackDescription2,
+                PIKsJackDescription2
+            )
+        except comtypes.COMError:
+            jack_description2 = None
+
         for i in range(jack_description.GetJackCount()):
-            yield JackDescription(jack_description.GetJackDescription(i))
+            jd = jack_description.GetJackDescription(i)
+            if jack_description2 is None:
+                jd2 = None
+            else:
+                jd2 = jack_description2.GetJackDescription2(i)
+            yield JackDescription(jd, jd2)
 
     @property
     def jack_information(self):
-        raise NotImplementedError
-        # conn_from = self.__connector
-        # try:
-        #     conn_to = conn_from.connected_to
-        # except comtypes.COMError:
-        #     raise AttributeError
-        #
-        # part = conn_to.part
-        #
-        # try:
-        #     return AudioJackSinkInformation(
-        #         part.activate(
-        #             IID_IKsJackSinkInformation,
-        #             PIKsJackSinkInformation
-        #         )
-        #     )
-        # except comtypes.COMError:
-        #     raise AttributeError
+        conn_from = self.__connector
+        try:
+            conn_to = conn_from.connected_to
+        except comtypes.COMError:
+            raise AttributeError
+
+        part = conn_to.part
+
+        try:
+            return AudioJackSinkInformation(
+                part.activate(
+                    IID_IKsJackSinkInformation,
+                    PIKsJackSinkInformation
+                )
+            )
+        except comtypes.COMError:
+            raise AttributeError
 
     @property
     def auto_gain_control(self):

@@ -185,6 +185,7 @@ PEChannelMapping = POINTER(EChannelMapping)
 class EPcxConnectionType(enum):
     eConnTypeUnknown = 0
     eConnType3Point5mm = 1
+    eConnTypeEighth = 1
     eConnTypeQuarter = 2
     eConnTypeAtapiInternal = 3
     eConnTypeRCA = 4
@@ -208,6 +209,7 @@ class EPcxGeoLocation(enum):
     eGeoLocTop = 5
     eGeoLocBottom = 6
     eGeoLocRearPanel = 7
+    eGeoLocRearOPanel = 7
     eGeoLocRiser = 8
     eGeoLocInsideMobileLid = 9
     eGeoLocDrivebay = 10

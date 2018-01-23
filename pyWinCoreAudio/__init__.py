@@ -98,22 +98,22 @@ if __name__ == '__main__':
                 print '        physical speakers:', endpoint.physical_speakers
                 print '        system effects:', endpoint.system_effects
 
-                # try:
-                #     sink = endpoint.jack_information
-                # except AttributeError:
-                #     pass
-                # else:
-                #     print '    manufacturer id:', sink.manufacturer_id
-                #     print '    product id:', sink.product_id
-                #     print '    audio latency:', sink.audio_latency
-                #     print '    hdcp capable:', sink.hdcp_capable
-                #     print '    ai capable:', sink.ai_capable
-                #     print '    description:', sink.description
-                #     print '    port id:', sink.port_id
-                #     print '    connection type:', sink.connection_type
-                print
+                try:
+                    sink = endpoint.jack_information
+                except AttributeError:
+                    pass
+                else:
+                    print '        manufacturer id:', sink.manufacturer_id
+                    print '        product id:', sink.product_id
+                    print '        audio latency:', sink.audio_latency
+                    print '        hdcp capable:', sink.hdcp_capable
+                    print '        ai capable:', sink.ai_capable
+                    print '        description:', sink.description
+                    print '        connection type:', sink.connection_type
+
                 try:
                     jacks = list(jack for jack in endpoint.jack_descriptions)
+                    print
                     print '        connectors'
 
                     for i, jack in enumerate(jacks):
@@ -123,12 +123,15 @@ if __name__ == '__main__':
                         print '                type:', jack.type
                         print '                location:', jack.location
                         print '                port:', jack.port
+                        print '                presence detection:', jack.presence_detection
+                        print '                dynamic format change:', jack.dynamic_format_change
                         print '                is connected:', jack.is_connected
                 except AttributeError:
                     pass
 
                 try:
                     volume = endpoint.volume
+                    print
                 except AttributeError:
                     pass
                 else:

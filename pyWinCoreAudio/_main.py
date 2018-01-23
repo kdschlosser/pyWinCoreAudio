@@ -2,7 +2,11 @@
 import comtypes
 import ctypes
 from _audioclient import PIAudioClient
-from _audiopolicy import PIAudioSessionManager2
+from _audiopolicy import (
+    IAudioSessionEvents,
+    PIAudioSessionManager,
+    PIAudioSessionManager2
+)
 from _policyconfig import (
     IPolicyConfigVista,
 )
@@ -30,6 +34,8 @@ from _enum import (
     EPcxGenLocation,
     EPxcPortConnection,
     EChannelMapping,
+    AudioSessionState,
+    AudioSessionDisconnectReason,
     KSJACK_SINK_CONNECTIONTYPE
 )
 from _devicetopologyapi import (
@@ -65,6 +71,7 @@ from _iid import (
     IID_IAudioTreble,
     IID_IAudioVolumeLevel,
     IID_IAudioMeterInformation,
+    IID_IAudioSessionManager,
     IID_IAudioSessionManager2,
     IID_IAudioClient,
     IID_IAudioEndpointVolumeEx,
@@ -551,6 +558,35 @@ EPCX_CONNECTION_TYPE = {
     )
 }
 
+AUDIO_SESSION_STATE = {
+    AudioSessionState.AudioSessionStateInactive: 'Inactive',
+    AudioSessionState.AudioSessionStateActive:   'Active',
+    AudioSessionState.AudioSessionStateExpired:  'Expired'
+}
+
+
+AUDIO_SESSION_DISCONNECT_REASON = {
+    AudioSessionDisconnectReason.DisconnectReasonDeviceRemoval:         (
+        'Device removal'
+    ),
+    AudioSessionDisconnectReason.DisconnectReasonServerShutdown:        (
+        'System shutdown'
+    ),
+    AudioSessionDisconnectReason.DisconnectReasonFormatChanged:         (
+        'Format changed'
+    ),
+    AudioSessionDisconnectReason.DisconnectReasonSessionLogoff:         (
+        'Session logoff'
+    ),
+    AudioSessionDisconnectReason.DisconnectReasonSessionDisconnected:   (
+        'Session disconnected'
+    ),
+    AudioSessionDisconnectReason.DisconnectReasonExclusiveModeOverride: (
+        'Exclusive mode override'
+    ),
+
+}
+
 
 class Singleton(type):
     _instances = {}
@@ -762,6 +798,7 @@ class AudioWaveFormat(object):
 
     def __init__(self, client):
         self.__client = client
+
 
 class AudioDeviceSubunit(object):
 
@@ -1084,6 +1121,171 @@ class AudioJackSinkInformation(object):
         return SINK_CONNECTIONTYPE[self.__sink_information.ConnType.value]
 
 
+class AudioSessionNotification(comtypes.COMObject):
+    _com_interfaces_ = [IAudioSessionEvents]
+
+    def __init__(self, session_namager, callback):
+        self.__session_namager = session_namager
+        self.__callback = callback
+        comtypes.COMObject.__init__(self)
+
+    def OnSessionCreated(self, NewSession):
+        self.__callback.session_created(AudioSession(NewSession))
+
+
+class AudioSessionManager(object):
+    def __init__(self, endpoint):
+        self.__endpoint = endpoint
+        try:
+            self.__session_manager = endpoint.activate(
+                IID_IAudioSessionManager2,
+                PIAudioSessionManager2
+            )
+        except comtypes.COMError:
+            try:
+                self.__session_manager = endpoint.activate(
+                    IID_IAudioSessionManager,
+                    PIAudioSessionManager
+                )
+            except comtypes.COMError:
+                raise NotImplementedError
+
+    def register_duck_notification(self, callback):
+        raise NotImplementedError
+
+    def unregister_duck_notification(self, callback):
+        raise NotImplementedError
+
+    def register_session_notification(self, callback):
+        try:
+            callback = AudioSessionNotification(self, callback)
+            self.__session_manager.RegisterSessionNotification(callback)
+            return callback
+        except comtypes.COMError:
+            raise AttributeError
+
+    def unregister_session_notification(self, callback):
+        try:
+            self.__session_manager.UnregisterSessionNotification(callback)
+        except comtypes.COMError:
+            raise AttributeError
+
+    def __iter__(self):
+        session_enum = self.__endpoint.GetSessionEnumerator()
+
+        for i in range(session_enum.GetCount()):
+            yield AudioSession(session_enum.GetSession(i))
+
+
+class AudioSessionEvent(comtypes.COMObject):
+    _com_interfaces_ = [IAudioSessionEvents]
+
+    def __init__(self, session, callback):
+        self.__session = session
+        self.__callback = callback
+        comtypes.COMObject.__init__(self)
+
+    def OnChannelVolumeChanged(
+        self,
+        ChannelCount,
+        NewChannelVolumeArray,
+        ChangedChannel,
+        _
+    ):
+        channel_volume_array = ctypes.cast(
+            NewChannelVolumeArray,
+            ctypes.POINTER(ctypes.c_float)
+        )
+        channel_volumes = list(
+            channel_volume_array[i] for i in range(ChannelCount)
+        )
+
+        self.__callback.channel_volume_changed(
+            self.__session,
+            ChangedChannel,
+            channel_volumes[ChangedChannel]
+        )
+
+    def OnDisplayNameChanged(self, NewDisplayName, _):
+        self.__callback.display_name_changed(
+            self.__session,
+            NewDisplayName,
+        )
+
+    def OnGroupingParamChanged(self, NewGroupingParam, _):
+        self.__callback.grouping_param_changed(
+            self.__session,
+            NewGroupingParam,
+        )
+
+    def OnIconPathChanged(self, NewIconPath, _):
+        self.__callback.icon_path_changed(
+            self.__session,
+            NewIconPath,
+        )
+
+    def OnSessionDisconnected(self, DisconnectReason):
+        self.__callback.session_disconnect(
+            self.__session,
+            AUDIO_SESSION_DISCONNECT_REASON[DisconnectReason]
+        )
+
+    def OnSimpleVolumeChanged(self, NewVolume, NewMute, _):
+        self.__callback.volume_changed(
+            self.__session,
+            NewVolume,
+            bool(NewMute)
+        )
+
+    def OnStateChanged(self, NewState):
+        self.__callback.state_changed(
+            self.__session,
+            AUDIO_SESSION_STATE[NewState]
+        )
+
+
+class AudioSession(object):
+
+    def __init__(self, session):
+        self.__session = session
+
+    @property
+    def name(self):
+        return self.__session.GetDisplayName()
+
+    @name.setter
+    def name(self, name):
+        self.__session.SetDisplayName(name, None)
+
+    @property
+    def grouping_param(self):
+        return self.__session.GetGroupingParam()
+
+    @grouping_param.setter
+    def grouping_param(self, grouping_param):
+        self.__session.SetGroupingParam(grouping_param, None)
+
+    @property
+    def icon_path(self):
+        return self.__session.GetIconPath()
+
+    @icon_path.setter
+    def icon_path(self, icon_path):
+        self.__session.SetIconPath(icon_path, None)
+
+    @property
+    def state(self):
+        return self.__session.GetState()
+
+    def register_notification(self, callback):
+        callback = AudioSessionEvent(self, callback)
+        self.__session.RegisterAudioSessionNotification(callback)
+        return callback
+
+    def unregister_notification(self, callback):
+        self.__session.UnregisterAudioSessionNotification(callback)
+
+
 class AudioEndpoint(object):
     __metaclass__ = Singleton
 
@@ -1205,10 +1407,11 @@ class AudioEndpoint(object):
 
     @property
     def session_manager(self):
-        return self.__activate(
-            IID_IAudioSessionManager2,
-            PIAudioSessionManager2
-        )
+        try:
+            return AudioSessionManager(self)
+        except NotImplementedError:
+            raise AttributeError
+
 
     @property
     def data_flow(self):

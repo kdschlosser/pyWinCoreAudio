@@ -61,7 +61,7 @@ class IAudioSessionEvents(comtypes.IUnknown):
             HRESULT,
             'OnChannelVolumeChanged',
             (['in'], DWORD, 'ChannelCount'),
-            (['in'], FLOAT, 'NewChannelVolumeArray'),
+            (['in'], (FLOAT * 8), 'NewChannelVolumeArray'),
             (['in'], DWORD, 'ChangedChannel'),
             (['in'], LPCGUID, 'EventContext'),
         ),

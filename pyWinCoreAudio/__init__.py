@@ -86,6 +86,7 @@ if __name__ == '__main__':
             print '    connector count:', device.connector_count
             print '    state:', device.state
             for endpoint in device:
+                full_range_speakers = endpoint.full_range_speakers
                 print
                 print '    endpoint name:', endpoint.name
                 print '    ---------------------------------------------------'
@@ -93,7 +94,7 @@ if __name__ == '__main__':
                 print '        data flow:', endpoint.data_flow
                 print '        form factor:', endpoint.form_factor
                 print '        type:', endpoint.form_factor
-                print '        full range speakers:', endpoint.full_range_speakers
+                print '        full range speakers:', full_range_speakers
                 print '        guid:', endpoint.guid
                 print '        physical speakers:', endpoint.physical_speakers
                 print '        system effects:', endpoint.system_effects
@@ -116,16 +117,19 @@ if __name__ == '__main__':
                     print
                     print '        connectors'
 
+                    def p(attr, v):
+                        print '               ', attr, v
+
                     for i, jack in enumerate(jacks):
                         print '            %d:' % i
-                        print '                channel mapping:', jack.channel_mapping
-                        print '                color:', jack.color
-                        print '                type:', jack.type
-                        print '                location:', jack.location
-                        print '                port:', jack.port
-                        print '                presence detection:', jack.presence_detection
-                        print '                dynamic format change:', jack.dynamic_format_change
-                        print '                is connected:', jack.is_connected
+                        p('channel mapping:', jack.channel_mapping)
+                        p('color:', jack.color)
+                        p('type:', jack.type)
+                        p('location:', jack.location)
+                        p('port:', jack.port)
+                        p('presence detection:', jack.presence_detection)
+                        p('dynamic format change:', jack.dynamic_format_change)
+                        p('is connected:', jack.is_connected)
                 except AttributeError:
                     pass
 
@@ -135,9 +139,10 @@ if __name__ == '__main__':
                 except AttributeError:
                     pass
                 else:
+                    scalar = volume.master_scalar
                     print '        volume'
                     print '            master level:', volume.master
-                    print '            master level scalar:', volume.master_scalar
+                    print '            master level scalar:', scalar
                     m_min, m_max, m_step = volume.range
                     print '            master min:', m_min
                     print '            master max:', m_max
@@ -180,20 +185,26 @@ if __name__ == '__main__':
         default_render = AudioDevices.default_render_endpoint
         print 'default render device:', default_render.device.name
         print 'default render endpoint:', default_render.name
-        print 'default render endpoint volume:', str(default_render.volume.master_scalar * 100) + '%'
+        print 'default render endpoint volume:', str(
+            default_render.volume.master_scalar * 100
+        ) + '%'
 
         default_capture = AudioDevices.default_capture_endpoint
         print 'default capture device:', default_capture.device.name
         print 'default capture endpoint:', default_capture.name
-        print 'default capture endpoint volume:', str(default_capture.volume.master_scalar * 100) + '%'
-
-
+        print 'default capture endpoint volume:', str(
+            default_capture.volume.master_scalar * 100
+        ) + '%'
 
         registered_volume_callbacks[default_render] = (
-            default_render.volume.register_volume_change_callback(volume_change)
+            default_render.volume.register_volume_change_callback(
+                volume_change
+            )
         )
         registered_volume_callbacks[default_capture] = (
-            default_capture.volume.register_volume_change_callback(volume_change)
+            default_capture.volume.register_volume_change_callback(
+                volume_change
+            )
         )
 
         AudioDevices.bind('property', property_changed)

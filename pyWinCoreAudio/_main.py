@@ -758,6 +758,11 @@ class _NotificationClient(comtypes.COMObject):
         # )
 
 
+class AudioWaveFormat(object):
+
+    def __init__(self, client):
+        self.__client = client
+
 class AudioDeviceSubunit(object):
 
     def __init__(self, subunit):

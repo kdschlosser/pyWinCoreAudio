@@ -1925,6 +1925,13 @@ class AudioDefaultEndpoint(object):
 
     def __init__(self, device_enum, data_flow):
         self.__device_enum = device_enum
+        for key, value in E_DATA_FLOW.items():
+            if data_flow in (key, value):
+                data_flow = key
+                break
+        else:
+            raise AttributeError
+
         self.__data_flow = data_flow
 
     @property
@@ -1988,6 +1995,7 @@ class AudioDeviceEnumerator(object):
         )
 
     def default_endpoint(self, data_flow):
+
         return self.__device_enum.GetDefaultAudioEndpoint(
             data_flow,
             ERole.eMultimedia

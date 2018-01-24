@@ -209,12 +209,6 @@ if __name__ == '__main__':
             print 'default endpoint changed'
             print '    device name:', device.name
 
-            for endpoint, callback in registered_volume_callbacks.items()[:]:
-                if not endpoint.is_default:
-                    endpoint.volume.unregister_volume_change_callback(callback)
-                    del registered_volume_callbacks[endpoint]
-                    break
-
             for endpoint in device:
                 if (
                     endpoint.is_default and

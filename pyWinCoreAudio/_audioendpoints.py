@@ -25,6 +25,7 @@ from ctypes.wintypes import (
 
 COMMETHOD = comtypes.COMMETHOD
 HRESULT = ctypes.HRESULT
+POINTER = ctypes.POINTER
 
 
 class IAudioEndpointFormatControl(comtypes.IUnknown):

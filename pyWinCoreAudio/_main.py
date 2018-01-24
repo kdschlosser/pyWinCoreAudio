@@ -1,9 +1,12 @@
 
+import threading
 import comtypes
 import ctypes
 from _audioclient import PIAudioClient
 from _audiopolicy import (
     IAudioSessionEvents,
+    IAudioSessionNotification,
+    IAudioSessionControl2,
     PIAudioSessionManager,
     PIAudioSessionManager2
 )
@@ -85,6 +88,7 @@ from _iid import (
     CLSID_PolicyConfigVistaClient
 )
 from _constant import (
+    S_OK,
     PKEY_Device_FriendlyName,
     PKEY_Device_DeviceDesc,
     PKEY_DeviceInterface_FriendlyName,
@@ -98,7 +102,7 @@ from _constant import (
     DEVICE_STATE_MASK_ALL,
     ENDPOINT_HARDWARE_SUPPORT_VOLUME,
     ENDPOINT_HARDWARE_SUPPORT_MUTE,
-    ENDPOINT_HARDWARE_SUPPORT_METER,
+    # ENDPOINT_HARDWARE_SUPPORT_METER,
     KSAUDIO_SPEAKER_DIRECTOUT,
     KSAUDIO_SPEAKER_MONO,
     KSAUDIO_SPEAKER_1POINT1,
@@ -567,22 +571,22 @@ AUDIO_SESSION_STATE = {
 
 AUDIO_SESSION_DISCONNECT_REASON = {
     AudioSessionDisconnectReason.DisconnectReasonDeviceRemoval:         (
-        'Device removal'
+        'Audio endpoint device removed'
     ),
     AudioSessionDisconnectReason.DisconnectReasonServerShutdown:        (
-        'System shutdown'
+        'Windows audio service has stopped'
     ),
     AudioSessionDisconnectReason.DisconnectReasonFormatChanged:         (
-        'Format changed'
+        'Stream format changed'
     ),
     AudioSessionDisconnectReason.DisconnectReasonSessionLogoff:         (
-        'Session logoff'
+        'User logged off'
     ),
     AudioSessionDisconnectReason.DisconnectReasonSessionDisconnected:   (
-        'Session disconnected'
+        'Remote desktop session disconnected'
     ),
     AudioSessionDisconnectReason.DisconnectReasonExclusiveModeOverride: (
-        'Exclusive mode override'
+        'Shared mode disabled'
     ),
 
 }
@@ -617,6 +621,13 @@ class Singleton(type):
         # print '}'
 
         return instances[args]
+
+
+def _run_in_thread(func, *args, **kwargs):
+    t = threading.Thread(target=func, args=args, kwargs=kwargs)
+    t.daemon = True
+    t.start()
+    return t
 
 
 class JackDescription(object):
@@ -699,7 +710,7 @@ class AudioSpeakers(object):
         raise AttributeError
 
 
-class _EndpointVolumeCallback(comtypes.COMObject):
+class AudioEndpointVolumeCallback(comtypes.COMObject):
     _com_interfaces_ = [IAudioEndpointVolumeCallback]
 
     def __init__(self, endpoint, callback):
@@ -718,10 +729,21 @@ class _EndpointVolumeCallback(comtypes.COMObject):
         channel_volumes = list(
             pfChannelVolumes[i] for i in range(num_channels)
         )
-        self.__callback(self.__endpoint, master_volume, channel_volumes, mute)
+
+        def do():
+            self.__callback.endpoint_volume_change(
+                self.__endpoint,
+                master_volume,
+                channel_volumes,
+                mute
+            )
+
+        _run_in_thread(do)
+
+        return S_OK
 
 
-class _NotificationClient(comtypes.COMObject):
+class AudioNotificationClient(comtypes.COMObject):
     _com_interfaces_ = [IMMNotificationClient]
 
     def __init__(self, device_enum, callbacks):
@@ -746,52 +768,74 @@ class _NotificationClient(comtypes.COMObject):
 
     def OnDeviceStateChanged(self, pwstrDeviceId, dwNewState):
         device = self.__get_device(pwstrDeviceId)
-
         state = AUDIO_DEVICE_STATE[dwNewState]
-        for callback in self.__callbacks['state']:
-            callback(device, state)
 
-        # print (
-        #     'OnDeviceStateChanged',
-        #     'pwstrDeviceId:', pwstrDeviceId,
-        #     'dwNewState:', dwNewState
-        # )
+        def do():
+            for callback in self.__callbacks:
+                try:
+                    callback.device_state_change(device, state)
+                except AttributeError:
+                    pass
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnDeviceAdded(self, pwstrDeviceId):
         device = self.__get_device(pwstrDeviceId)
-        for callback in self.__callbacks['add']:
-            callback(device)
 
-        # print 'OnDeviceAdded', 'pwstrDeviceId:', pwstrDeviceId
+        def do():
+            for callback in self.__callbacks:
+                try:
+                    callback.device_added(device)
+                except AttributeError:
+                    pass
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnDeviceRemoved(self, pwstrDeviceId):
         device = self.__get_device(pwstrDeviceId)
-        for callback in self.__callbacks['remove']:
-            callback(device)
 
-        # print 'OnDeviceRemoved', 'pwstrDeviceId:', pwstrDeviceId
+        def do():
+            for callback in self.__callbacks:
+                try:
+                    callback.device_removed(device)
+                except AttributeError:
+                    pass
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnDefaultDeviceChanged(self, _, __, pwstrDefaultDeviceId):
         device = self.__get_device(pwstrDefaultDeviceId)
-        for callback in self.__callbacks['default']:
-            callback(device)
 
-        # print (
-        #     'OnDefaultDeviceChanged',
-        #     'flow:', flow,
-        #     'role:', role,
-        #     'pwstrDefaultDeviceId:', pwstrDefaultDeviceId
-        # )
+        def do():
+            for callback in self.__callbacks:
+                try:
+                    callback.default_endpoint_changed(device)
+                except AttributeError:
+                    pass
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnPropertyValueChanged(self, pwstrDeviceId, key):
         device = self.__get_device(pwstrDeviceId)
-        for callback in self.__callbacks['property']:
-            callback(device, key)
-        # print (
-        #     'OnPropertyValueChanged',
-        #     'pwstrDeviceId:', pwstrDeviceId,
-        #     'key:', key
-        # )
+
+        def do():
+            for callback in self.__callbacks:
+                try:
+                    callback.device_property_changed(device, key)
+                except AttributeError:
+                    pass
+
+        _run_in_thread(do)
+
+        return S_OK
 
 
 class AudioWaveFormat(object):
@@ -905,13 +949,13 @@ class AudioPart(object):
     def device_topology(self):
         return self.__part.GetTopologyObject()
 
-    def register_control_change_callback(self, interface_iid, callback):
+    def register_notification_callback(self, interface_iid, callback):
         self.__part.RegisterControlChangeCallback(
             interface_iid,
             callback
         )
 
-    def unregister_control_change_callback(self, callback):
+    def unregister_notification_callback(self, callback):
         self.__part.UnregisterControlChangeCallback(callback)
         callback.Release()
 
@@ -1012,12 +1056,15 @@ class AudioVolume(object):
     def step(self):
         return self.__volume.GetVolumeStepInfo()
 
-    def register_volume_change_callback(self, callback):
-        volume_callback = _EndpointVolumeCallback(self.__endpoint, callback)
+    def register_notification_callback(self, callback):
+        volume_callback = AudioEndpointVolumeCallback(
+            self.__endpoint,
+            callback
+        )
         self.__volume.RegisterControlChangeNotify(volume_callback)
         return volume_callback
 
-    def unregister_volume_change_callback(self, callback):
+    def unregister_notification_callback(self, callback):
         self.__volume.UnregisterControlChangeNotify(callback)
 
     def up(self):
@@ -1122,20 +1169,31 @@ class AudioJackSinkInformation(object):
 
 
 class AudioSessionNotification(comtypes.COMObject):
-    _com_interfaces_ = [IAudioSessionEvents]
+    _com_interfaces_ = [IAudioSessionNotification]
 
-    def __init__(self, session_namager, callback):
-        self.__session_namager = session_namager
+    def __init__(self, session_manager, callback):
+        self.__session_manager = session_manager
         self.__callback = callback
         comtypes.COMObject.__init__(self)
 
-    def OnSessionCreated(self, NewSession):
-        self.__callback.session_created(AudioSession(NewSession))
+    def OnSessionCreated(self, _):
+
+        def do():
+            self.__session_manager.update_sessions(
+                self.__callback.session_created
+            )
+
+        _run_in_thread(do)
+
+        return S_OK
 
 
 class AudioSessionManager(object):
     def __init__(self, endpoint):
         self.__endpoint = endpoint
+        self.__sessions = {}
+        self.__update_lock = threading.Lock()
+
         try:
             self.__session_manager = endpoint.activate(
                 IID_IAudioSessionManager2,
@@ -1150,13 +1208,59 @@ class AudioSessionManager(object):
             except comtypes.COMError:
                 raise NotImplementedError
 
+    def update_sessions(self, callback=None):
+
+        self.__update_lock.acquire()
+
+        event = threading.Event()
+        event.wait(0.1)
+
+        try:
+            try:
+                session_enum = self.__session_manager.GetSessionEnumerator()
+            except comtypes.COMError:
+                pass
+
+            else:
+                sessions = {}
+
+                for i in range(session_enum.GetCount()):
+                    session = session_enum.GetSession(i)
+                    try:
+                        session = session.QueryInterface(IAudioSessionControl2)
+                    except comtypes.COMError:
+                        pass
+
+                    if session in self.__sessions:
+                        sessions[session] = self.__sessions[session]
+                        del self.__sessions[session]
+
+                    else:
+                        sessions[session] = AudioSession(self, session)
+                        if callback is not None:
+                            callback(sessions[session])
+
+                for session in self.__sessions.values():
+                    session.release()
+
+                self.__sessions.clear()
+
+                for key, value in sessions.items():
+                    self.__sessions[key] = value
+        finally:
+            self.__update_lock.release()
+
+    @property
+    def endpoint(self):
+        return self.__endpoint
+
     def register_duck_notification(self, callback):
         raise NotImplementedError
 
     def unregister_duck_notification(self, callback):
         raise NotImplementedError
 
-    def register_session_notification(self, callback):
+    def register_notification_callback(self, callback):
         try:
             callback = AudioSessionNotification(self, callback)
             self.__session_manager.RegisterSessionNotification(callback)
@@ -1164,17 +1268,29 @@ class AudioSessionManager(object):
         except comtypes.COMError:
             raise AttributeError
 
-    def unregister_session_notification(self, callback):
+    def unregister_notification_callback(self, callback):
         try:
             self.__session_manager.UnregisterSessionNotification(callback)
         except comtypes.COMError:
             raise AttributeError
 
     def __iter__(self):
-        session_enum = self.__endpoint.GetSessionEnumerator()
+        try:
+            session_enum = self.__session_manager.GetSessionEnumerator()
+        except comtypes.COMError:
+            raise TypeError
 
         for i in range(session_enum.GetCount()):
-            yield AudioSession(session_enum.GetSession(i))
+            session = session_enum.GetSession(i)
+            try:
+                session = session.QueryInterface(IAudioSessionControl2)
+            except comtypes.COMError:
+                pass
+
+            if session not in self.__sessions:
+                self.__sessions[session] = AudioSession(self, session)
+
+            yield self.__sessions[session]
 
 
 class AudioSessionEvent(comtypes.COMObject):
@@ -1183,6 +1299,14 @@ class AudioSessionEvent(comtypes.COMObject):
     def __init__(self, session, callback):
         self.__session = session
         self.__callback = callback
+        self.__name = session.name
+        self.__endpoint = session.session_manager.endpoint
+
+        try:
+            self.__id = session.id
+        except AttributeError:
+            self.__id = None
+
         comtypes.COMObject.__init__(self)
 
     def OnChannelVolumeChanged(
@@ -1200,58 +1324,114 @@ class AudioSessionEvent(comtypes.COMObject):
             channel_volume_array[i] for i in range(ChannelCount)
         )
 
-        self.__callback.channel_volume_changed(
-            self.__session,
-            ChangedChannel,
-            channel_volumes[ChangedChannel]
-        )
+        def do():
+            self.__callback.channel_volume_changed(
+                self.__session,
+                ChangedChannel,
+                channel_volumes[ChangedChannel]
+            )
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnDisplayNameChanged(self, NewDisplayName, _):
-        self.__callback.display_name_changed(
-            self.__session,
-            NewDisplayName,
-        )
+        if NewDisplayName == '@%SystemRoot%\System32\AudioSrv.Dll,-202':
+            NewDisplayName = 'System Sounds'
+
+        def do():
+            self.__callback.session_name_changed(
+                self.__session,
+                NewDisplayName,
+            )
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnGroupingParamChanged(self, NewGroupingParam, _):
-        self.__callback.grouping_param_changed(
-            self.__session,
-            NewGroupingParam,
-        )
+
+        def do():
+            self.__callback.session_grouping_changed(
+                self.__session,
+                NewGroupingParam,
+            )
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnIconPathChanged(self, NewIconPath, _):
-        self.__callback.icon_path_changed(
-            self.__session,
-            NewIconPath,
-        )
+        def do():
+            self.__callback.session_icon_path_changed(
+                self.__session,
+                NewIconPath,
+            )
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnSessionDisconnected(self, DisconnectReason):
-        self.__callback.session_disconnect(
-            self.__session,
-            AUDIO_SESSION_DISCONNECT_REASON[DisconnectReason]
-        )
+
+        def do():
+            self.__callback.session_disconnect(
+                self.__endpoint,
+                self.__name,
+                self.__id,
+                AUDIO_SESSION_DISCONNECT_REASON[DisconnectReason]
+            )
+            self.__session.session_manager.update_sessions()
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnSimpleVolumeChanged(self, NewVolume, NewMute, _):
-        self.__callback.volume_changed(
-            self.__session,
-            NewVolume,
-            bool(NewMute)
-        )
+
+        def do():
+            self.__callback.session_volume_changed(
+                self.__session,
+                NewVolume,
+                bool(NewMute)
+            )
+
+        _run_in_thread(do)
+
+        return S_OK
 
     def OnStateChanged(self, NewState):
-        self.__callback.state_changed(
-            self.__session,
-            AUDIO_SESSION_STATE[NewState]
-        )
+
+        def do():
+            self.__callback.session_state_changed(
+                self.__session,
+                AUDIO_SESSION_STATE[NewState]
+            )
+
+        _run_in_thread(do)
+
+        return S_OK
 
 
 class AudioSession(object):
 
-    def __init__(self, session):
+    def __init__(self, session_manager, session):
+        self.__session_manager = session_manager
         self.__session = session
+
+    def release(self):
+        del self.__session
+
+    @property
+    def session_manager(self):
+        return self.__session_manager
 
     @property
     def name(self):
-        return self.__session.GetDisplayName()
+        display_name = self.__session.GetDisplayName()
+        if display_name == '@%SystemRoot%\System32\AudioSrv.Dll,-202':
+            display_name = 'System Sounds'
+        return display_name
 
     @name.setter
     def name(self, name):
@@ -1275,14 +1455,50 @@ class AudioSession(object):
 
     @property
     def state(self):
-        return self.__session.GetState()
+        return AUDIO_SESSION_STATE[self.__session.GetState().value]
 
-    def register_notification(self, callback):
+    @property
+    def process_id(self):
+        try:
+            return self.__session.GetProcessId()
+        except comtypes.COMError:
+            raise AttributeError
+
+    @property
+    def id(self):
+        try:
+            return self.__session.GetSessionIdentifier()
+        except comtypes.COMError:
+            raise AttributeError
+
+    @property
+    def instance_id(self):
+        try:
+            return self.__session.GetSessionInstanceIdentifier()
+        except comtypes.COMError:
+            raise AttributeError
+
+    @property
+    def is_system_sounds(self):
+        try:
+            return not bool(self.__session.IsSystemSoundsSession())
+        except comtypes.COMError:
+            raise AttributeError
+
+    def ducking_preferences(self, ducking_preference):
+        try:
+            self.__session.SetDuckingPreference(ducking_preference)
+        except comtypes.COMError:
+            raise AttributeError
+
+    ducking_preferences = property(fset=ducking_preferences)
+
+    def register_notification_callback(self, callback):
         callback = AudioSessionEvent(self, callback)
         self.__session.RegisterAudioSessionNotification(callback)
         return callback
 
-    def unregister_notification(self, callback):
+    def unregister_notification_callback(self, callback):
         self.__session.UnregisterAudioSessionNotification(callback)
 
 
@@ -1411,7 +1627,6 @@ class AudioEndpoint(object):
             return AudioSessionManager(self)
         except NotImplementedError:
             raise AttributeError
-
 
     @property
     def data_flow(self):
@@ -1803,16 +2018,10 @@ class AudioDevices(object):
     def __init__(self):
         comtypes.CoInitialize()
 
-        self.__callbacks = dict(
-            property=[],
-            state=[],
-            default=[],
-            remove=[],
-            add=[]
-        )
+        self.__callbacks = []
         self.__device_enum = AudioDeviceEnumerator()
 
-        self.__notification_client = _NotificationClient(
+        self.__notification_client = AudioNotificationClient(
             self.__device_enum,
             self.__callbacks
         )
@@ -1820,11 +2029,11 @@ class AudioDevices(object):
             self.__notification_client
         )
 
-    def bind(self, notification, callback):
-        self.__callbacks[notification] += [callback]
+    def register_notification_callback(self, callback):
+        self.__callbacks += [callback]
 
-    def unbind(self, notification, callback):
-        self.__callbacks[notification].remove(callback)
+    def unregister_notification_callback(self, callback):
+        self.__callbacks.remove(callback)
 
     @property
     def default_render_endpoint(self):

@@ -59,24 +59,8 @@ class IAudioSessionEvents(comtypes.IUnknown):
         COMMETHOD(
             [],
             HRESULT,
-            'OnChannelVolumeChanged',
-            (['in'], DWORD, 'ChannelCount'),
-            (['in'], (FLOAT * 8), 'NewChannelVolumeArray'),
-            (['in'], DWORD, 'ChangedChannel'),
-            (['in'], LPCGUID, 'EventContext'),
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
             'OnDisplayNameChanged',
             (['in'], LPCWSTR, 'NewDisplayName'),
-            (['in'], LPCGUID, 'EventContext'),
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'OnGroupingParamChanged',
-            (['in'], LPCGUID, 'NewGroupingParam'),
             (['in'], LPCGUID, 'EventContext'),
         ),
         COMMETHOD(
@@ -85,13 +69,6 @@ class IAudioSessionEvents(comtypes.IUnknown):
             'OnIconPathChanged',
             (['in'], LPWCHAR, 'NewIconPath'),
             (['in'], LPCGUID, 'EventContext'),
-        ),
-
-        COMMETHOD(
-            [],
-            HRESULT,
-            'OnSessionDisconnected',
-            (['in'], DWORD, 'DisconnectReason'),
         ),
         COMMETHOD(
             [],
@@ -104,7 +81,29 @@ class IAudioSessionEvents(comtypes.IUnknown):
         COMMETHOD(
             [],
             HRESULT,
+            'OnChannelVolumeChanged',
+            (['in'], DWORD, 'ChannelCount'),
+            (['in'], (FLOAT * 8), 'NewChannelVolumeArray'),
+            (['in'], DWORD, 'ChangedChannel'),
+            (['in'], LPCGUID, 'EventContext'),
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'OnGroupingParamChanged',
+            (['in'], LPCGUID, 'NewGroupingParam'),
+            (['in'], LPCGUID, 'EventContext'),
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
             'OnStateChanged',
+            (['in'], DWORD, 'DisconnectReason'),
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'OnSessionDisconnected',
             (['in'], DWORD, 'DisconnectReason'),
         )
     )
@@ -127,7 +126,7 @@ class IAudioSessionControl(comtypes.IUnknown):
             [],
             HRESULT,
             'GetDisplayName',
-            (['out'], LPWSTR, 'pRetVal')
+            (['out'], POINTER(LPWSTR), 'pRetVal')
         ),
         COMMETHOD(
             [],
@@ -140,7 +139,7 @@ class IAudioSessionControl(comtypes.IUnknown):
             [],
             HRESULT,
             'GetIconPath',
-            (['out'], LPCWSTR, 'pRetVal')
+            (['out'], POINTER(LPCWSTR), 'pRetVal')
         ),
         COMMETHOD(
             [],
@@ -153,13 +152,13 @@ class IAudioSessionControl(comtypes.IUnknown):
             [],
             HRESULT,
             'GetGroupingParam',
-            (['out'], LPCGUID, 'pRetVal')
+            (['out'], POINTER(GUID), 'pRetVal')
         ),
         COMMETHOD(
             [],
             HRESULT,
             'SetGroupingParam',
-            (['in'], LPCGUID, 'Grouping'),
+            (['in'], LPCGUID, 'Override'),
             (['in'], LPCGUID, 'EventContext')
         ),
         COMMETHOD(
@@ -228,19 +227,19 @@ class IAudioSessionControl2(IAudioSessionControl):
             [],
             HRESULT,
             'GetSessionIdentifier',
-            (['out', 'retval'], LPCWSTR, 'pRetVal')
+            (['out'], POINTER(LPCWSTR), 'pRetVal')
         ),
         COMMETHOD(
             [],
             HRESULT,
             'GetSessionInstanceIdentifier',
-            (['out', 'retval'], LPCWSTR, 'pRetVal')
+            (['out'], POINTER(LPCWSTR), 'pRetVal')
         ),
         COMMETHOD(
             [],
             HRESULT,
             'GetProcessId',
-            (['out', 'retval'], LPDWORD, 'pRetVal')
+            (['out'], POINTER(DWORD), 'pRetVal')
         ),
         COMMETHOD(
             [],
@@ -270,8 +269,8 @@ class IAudioSessionManager(comtypes.IUnknown):
             (['in'], LPCGUID, 'AudioSessionGuid'),
             (['in'], DWORD, 'StreamFlags'),
             (
-                ['out', 'retval'],
-                PIAudioSessionControl,
+                ['out'],
+                POINTER(PIAudioSessionControl),
                 'SessionControl'
             )
         ),
@@ -279,9 +278,9 @@ class IAudioSessionManager(comtypes.IUnknown):
             [],
             HRESULT,
             'GetSimpleAudioVolume',
-            (['in'], POINTER(GUID), 'AudioSessionGuid'),
+            (['in'], LPCGUID, 'AudioSessionGuid'),
             (['in'], DWORD, 'CrossProcessSession'),
-            (['out', 'retval'], PISimpleAudioVolume, 'AudioVolume')
+            (['out'], POINTER(PISimpleAudioVolume), 'AudioVolume')
         )
 
     )
@@ -304,7 +303,7 @@ class IAudioVolumeDuckNotification(comtypes.IUnknown):
         COMMETHOD(
             [],
             HRESULT,
-            'OnVolumeDuckNotification',
+            'OnVolumeUnduckNotification',
             (['in'], LPCWSTR, 'sessionID')
         )
     )
@@ -323,28 +322,22 @@ class IAudioSessionManager2(IAudioSessionManager):
             'GetSessionEnumerator',
             (
                 ['out', 'retval'],
-                PIAudioSessionEnumerator,
+                POINTER(PIAudioSessionEnumerator),
                 'SessionList'
             )
         ),
-        COMMETHOD(
-            [],
+        comtypes.STDMETHOD(
             HRESULT,
             'RegisterSessionNotification',
             (
-                ['out', 'retval'],
                 PIAudioSessionNotification,
-                'SessionNotification'
             )
         ),
-        COMMETHOD(
-            [],
+        comtypes.STDMETHOD(
             HRESULT,
             'UnregisterSessionNotification',
             (
-                ['out', 'retval'],
                 PIAudioSessionNotification,
-                'SessionNotification'
             )
         ),
         COMMETHOD(
@@ -352,21 +345,13 @@ class IAudioSessionManager2(IAudioSessionManager):
             HRESULT,
             'RegisterDuckNotification',
             (['in'], LPCWSTR, 'SessionID'),
-            (
-                ['out', 'retval'],
-                PIAudioVolumeDuckNotification,
-                'duckNotification'
-            )
+            (['in'], PIAudioVolumeDuckNotification, 'duckNotification')
         ),
         COMMETHOD(
             [],
             HRESULT,
             'UnregisterDuckNotification',
-            (
-                ['out', 'retval'],
-                PIAudioVolumeDuckNotification,
-                'duckNotification'
-            )
+            (['in'], PIAudioVolumeDuckNotification, 'duckNotification')
         )
     )
 

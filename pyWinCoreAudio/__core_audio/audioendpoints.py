@@ -17,21 +17,29 @@
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
 import ctypes
-from _enum import APO_BUFFER_FLAGS
-from ctypes.wintypes import (UINT)
+import comtypes
+from iid import IID_IAudioEndpointFormatControl
+from ctypes.wintypes import (
+    DWORD,
+)
 
+COMMETHOD = comtypes.COMMETHOD
+HRESULT = ctypes.HRESULT
 POINTER = ctypes.POINTER
-UINT32 = ctypes.c_uint32
-UINT_PTR = POINTER(UINT)
 
 
-class APO_CONNECTION_PROPERTY(ctypes.Structure):
-    _fields_ = [
-        ('pBuffer', UINT_PTR),
-        ('u32ValidFrameCount', UINT32),
-        ('u32BufferFlags', APO_BUFFER_FLAGS),
-        ('u32Signature', UINT32)
-    ]
+class IAudioEndpointFormatControl(comtypes.IUnknown):
+    _case_insensitive_ = True
+    _iid_ = IID_IAudioEndpointFormatControl
+    _methods_ = (
+        COMMETHOD(
+            [],
+            HRESULT,
+            'ResetToDefault',
+            (['in'], DWORD, 'ResetFlags')
+        ),
+    )
 
 
-PAPO_CONNECTION_PROPERTY = POINTER(APO_CONNECTION_PROPERTY)
+PIAudioEndpointFormatControl = POINTER(IAudioEndpointFormatControl)
+

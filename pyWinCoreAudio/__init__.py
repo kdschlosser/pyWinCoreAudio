@@ -1,12 +1,107 @@
-from _main import (
-    AudioDevices as _AudioDevices,
-)
+
 import comtypes
+from endpoint import AudioDefaultEndpoint
+from __core_audio.enum import EDataFlow
+from __core_audio.devicetopologyapi import PIDeviceTopology
+from __core_audio.iid import IID_IDeviceTopology
+from device import (
+    AudioDevice,
+    AudioDeviceEnumerator,
+    AudioNotificationClient
+)
+from __core_audio.constant import (
+    PKEY_DeviceInterface_FriendlyName,
+    STGM_READ
+)
+
+CLSCTX_INPROC_SERVER = comtypes.CLSCTX_INPROC_SERVER
+
+
+class AudioWaveFormat(object):
+
+    def __init__(self, client):
+        self.__client = client
+
+
+class AudioDevices(object):
+
+    def __init__(self):
+        comtypes.CoInitialize()
+
+        self.__callbacks = []
+        self.__device_enum = AudioDeviceEnumerator()
+
+        self.__notification_client = AudioNotificationClient(
+            self.__device_enum,
+            self.__callbacks
+        )
+        self.__device_enum.register_endpoint_notification_callback(
+            self.__notification_client
+        )
+
+    def register_notification_callback(self, callback):
+        self.__callbacks += [callback]
+
+    def unregister_notification_callback(self, callback):
+        self.__callbacks.remove(callback)
+
+    @property
+    def default_render_endpoint(self):
+        return AudioDefaultEndpoint(self.__device_enum, EDataFlow.eRender)
+
+    @property
+    def default_capture_endpoint(self):
+        return AudioDefaultEndpoint(self.__device_enum, EDataFlow.eCapture)
+
+    @property
+    def __devices(self):
+        used_names = []
+
+        for endpt in self.__device_enum.endpoints:
+            pStore = endpt.OpenPropertyStore(STGM_READ)
+            try:
+                name = pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
+            except comtypes.COMError:
+                continue
+
+            if name not in used_names:
+                used_names += [name]
+                device_topology = comtypes.cast(
+                    endpt.Activate(
+                        IID_IDeviceTopology,
+                        CLSCTX_INPROC_SERVER
+                    ),
+                    PIDeviceTopology
+                )
+
+                yield AudioDevice(
+                    device_topology.GetDeviceId(),
+                    self.__device_enum
+                )
+
+    def __iter__(self):
+        for dev in self.__devices:
+            yield dev
+
+    def __contains__(self, item):
+        for dev in self:
+            if item in (dev.name, dev.id):
+                return True
+        return False
+
+    def __getitem__(self, item):
+        if isinstance(item, (slice, int)):
+            return list(self)[item]
+
+        for dev in self:
+            if item in (dev.name, dev.id):
+                return dev
+        raise AttributeError
 
 
 comtypes.CoInitialize()
 
-AudioDevices = _AudioDevices()
+AudioDevices = AudioDevices()
 
 
 def stop():
@@ -16,7 +111,6 @@ def stop():
 if __name__ == '__main__':
     registered_volume_callbacks = {}
 
-    import sys
     import threading
     print_lock = threading.Lock()
 

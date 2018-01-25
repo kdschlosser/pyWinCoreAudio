@@ -19,6 +19,7 @@
 
 import comtypes
 from singleton import Singleton
+from utils import get_icon
 from __core_audio.audioclient import PIAudioClient
 from session import AudioSessionManager
 from speaker import AudioSpeakers
@@ -80,6 +81,7 @@ from __core_audio.iid import (
 
 from __core_audio.constant import (
     PKEY_Device_FriendlyName,
+    DEVPKEY_DeviceClass_IconPath,
     PKEY_Device_DeviceDesc,
     PKEY_AudioEndpoint_Disable_SysFx,
     PKEY_AudioEndpoint_PhysicalSpeakers,
@@ -227,6 +229,14 @@ class AudioEndpoint(object):
             yield AudioDeviceSubunit(
                 subunit
             )
+
+    @property
+    def icon(self):
+        pStore = self.__endpoint.OpenPropertyStore(STGM_READ)
+        # try:
+        return get_icon(pStore.GetValue(DEVPKEY_DeviceClass_IconPath))
+        # except comtypes.COMError:
+        #     pass
 
     def __activate(self, iid, pointer):
         try:

@@ -131,7 +131,7 @@ if __name__ == '__main__':
             print '    process id:', new_session.process_id
             print '    is system sounds:', new_session.is_system_sounds
             print '    grouping param:', new_session.grouping_param
-            print '    icon path:', new_session.icon_path
+            print '    icon:', new_session.icon
             print '    state:', new_session.state
             print
             print
@@ -182,6 +182,7 @@ if __name__ == '__main__':
             print '    endpoint name:', session_endpoint.name
             print '    name:', session.name
             print '    icon path:', new_path
+            print '    icon:', session.icon
             print
             print
             print_lock.release()
@@ -341,6 +342,7 @@ if __name__ == '__main__':
             print
             print 'device name:', device.name
             print '======================================================='
+            print '    icon:', device.icon
             print '    id:', device.id
             print '    connector count:', device.connector_count
             print '    state:', device.state
@@ -350,6 +352,7 @@ if __name__ == '__main__':
                 print '    endpoint name:', endpoint.name
                 print '    ---------------------------------------------------'
                 print '        description:', endpoint.description
+                print '        icon:', endpoint.icon
                 print '        data flow:', endpoint.data_flow
                 print '        form factor:', endpoint.form_factor
                 print '        type:', endpoint.form_factor
@@ -394,7 +397,7 @@ if __name__ == '__main__':
                             p('process id:', session.process_id)
                             p('is system sounds:', session.is_system_sounds)
                             p('grouping param:', session.grouping_param)
-                            p('icon path:', session.icon_path)
+                            p('icon:', session.icon)
                             p('state:', session.state)
                 try:
                     jacks = list(jack for jack in endpoint.jack_descriptions)

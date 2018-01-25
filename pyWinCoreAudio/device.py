@@ -21,7 +21,7 @@ import comtypes
 from singleton import Singleton
 from endpoint import AudioEndpoint
 from parts import AudioDeviceConnection
-from utils import run_in_thread
+from utils import run_in_thread, get_icon
 
 from __core_audio.mmdeviceapi import (
     IMMDeviceEnumerator,
@@ -43,6 +43,7 @@ from __core_audio.iid import (
 from __core_audio.constant import (
     S_OK,
     PKEY_DeviceInterface_FriendlyName,
+    DEVPKEY_DeviceClass_IconPath,
     STGM_READ,
     DEVICE_STATE_MASK_ALL
 )
@@ -116,6 +117,14 @@ class AudioDevice(object):
     @property
     def id(self):
         return self.__device_topology.GetDeviceId()
+
+    @property
+    def icon(self):
+        pStore = self.__device.OpenPropertyStore(STGM_READ)
+        try:
+            return get_icon(pStore.GetValue(DEVPKEY_DeviceClass_IconPath))
+        except comtypes.COMError:
+            pass
 
     @property
     def name(self):

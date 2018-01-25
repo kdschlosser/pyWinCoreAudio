@@ -20,7 +20,7 @@
 import comtypes
 import ctypes
 import threading
-from utils import run_in_thread
+from utils import run_in_thread, get_icon
 
 from __core_audio.constant import S_OK
 
@@ -349,11 +349,11 @@ class AudioSession(object):
         self.__session.SetGroupingParam(grouping_param, None)
 
     @property
-    def icon_path(self):
-        return self.__session.GetIconPath()
+    def icon(self):
+        return get_icon(self.__session.GetIconPath())
 
-    @icon_path.setter
-    def icon_path(self, icon_path):
+    @icon.setter
+    def icon(self, icon_path):
         self.__session.SetIconPath(icon_path, None)
 
     @property

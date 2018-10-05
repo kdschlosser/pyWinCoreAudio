@@ -71,8 +71,7 @@ def get_icon(icon):
 
     if icon in icons:
         return icons[icon]
-
-    libc = ctypes.CDLL(ctypes.util.find_library('c'))
+    libc = ctypes.cdll.msvcrt
     libc.memcpy.argtypes = [wintypes.LPVOID, wintypes.LPVOID, ctypes.c_size_t]
     libc.memcpy.restype = wintypes.LPCSTR
 

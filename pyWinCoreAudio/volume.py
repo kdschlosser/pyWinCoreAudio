@@ -20,19 +20,16 @@ import ctypes
 import comtypes
 from utils import run_in_thread
 from singleton import Singleton
-from __core_audio.constant import (
-    S_OK,
+from pyWinAPI.wtypes_h import FLOAT
+from pyWinAPI.winerror_h import S_OK
+from pyWinAPI.endpointvolume_h import (
     ENDPOINT_HARDWARE_SUPPORT_VOLUME,
-    ENDPOINT_HARDWARE_SUPPORT_MUTE
-)
-from __core_audio.iid import (
+    ENDPOINT_HARDWARE_SUPPORT_MUTE,
     IID_IAudioEndpointVolumeEx,
+    IAudioEndpointVolumeEx,
+    IAudioMeterInformation,
+    IAudioEndpointVolumeCallback,
     IID_IAudioMeterInformation
-)
-from __core_audio.endpointvolumeapi import (
-    PIAudioEndpointVolumeEx,
-    PIAudioMeterInformation,
-    IAudioEndpointVolumeCallback
 )
 
 
@@ -45,26 +42,31 @@ class AudioEndpointVolumeCallback(comtypes.COMObject):
         comtypes.COMObject.__init__(self)
 
     def OnNotify(self, pNotify):
-        mute = bool(pNotify.contents.bMuted)
-        master_volume = pNotify.contents.fMasterVolume
-        num_channels = pNotify.contents.nChannels
-        pfChannelVolumes = ctypes.cast(
-            pNotify.contents.afChannelVolumes,
-            ctypes.POINTER(ctypes.c_float)
-        )
-        channel_volumes = list(
-            pfChannelVolumes[i] for i in range(num_channels)
-        )
-
-        def do():
-            self.__callback.endpoint_volume_change(
-                self.__endpoint,
-                master_volume,
-                channel_volumes,
-                mute
+        try:
+            bMuted = bool(pNotify.contents.bMuted)
+            fMasterVolume = pNotify.contents.fMasterVolume
+            nChannels = pNotify.contents.nChannels
+            pfChannelVolumes = ctypes.cast(
+                pNotify.contents.afChannelVolumes,
+                ctypes.POINTER(FLOAT)
+            )
+            pfChannelVolumes = list(
+                pfChannelVolumes[i] for i in range(nChannels)
             )
 
-        run_in_thread(do)
+            def do(volume, mute, channel_volumes):
+                self.__callback.endpoint_volume_change(
+                    self.__endpoint,
+                    volume,
+                    channel_volumes,
+                    mute
+                )
+
+            run_in_thread(do, fMasterVolume, bMuted, pfChannelVolumes)
+        except:
+            import traceback
+            traceback.print_exc()
+            pass
 
         return S_OK
 
@@ -76,10 +78,13 @@ class AudioVolume(object):
         self.__endpoint = endpoint
         self.__volume = endpoint.activate(
             IID_IAudioEndpointVolumeEx,
-            PIAudioEndpointVolumeEx
+            ctypes.POINTER(IAudioEndpointVolumeEx)
         )
-        support = self.__volume.QueryHardwareSupport()
-        if support | ENDPOINT_HARDWARE_SUPPORT_VOLUME != support:
+        try:
+            support = self.__volume.QueryHardwareSupport()
+            if support | ENDPOINT_HARDWARE_SUPPORT_VOLUME != support:
+                raise NotImplementedError
+        except ValueError:
             raise NotImplementedError
 
     @property
@@ -189,7 +194,7 @@ class AudioPeakMeter(object):
     def __init__(self, endpoint):
         self.__peak_meter = endpoint.activate(
             IID_IAudioMeterInformation,
-            PIAudioMeterInformation
+            ctypes.POINTER(IAudioMeterInformation)
         )
 
     @property
@@ -198,15 +203,11 @@ class AudioPeakMeter(object):
         # support = self.__peak_meter.QueryHardwareSupport()
         # if support | ENDPOINT_HARDWARE_SUPPORT_METER != support:
             # raise NotImplementedError
-        channels = self.__peak_meter.GetChannelsPeakValues(self.channel_count)
 
-        channel_peaks = ctypes.cast(
-            channels,
-            ctypes.POINTER(ctypes.c_float)
-        )
-        return list(
-            channel_peaks[i] for i in range(self.channel_count)
-        )
+        channel_count = self.channel_count
+        channels = self.__peak_meter.GetChannelsPeakValues(channel_count)
+
+        return list(channels[i] for i in range(channel_count))
 
     @property
     def channel_count(self):

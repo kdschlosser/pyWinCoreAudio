@@ -21,25 +21,21 @@ import comtypes
 import ctypes
 import threading
 from utils import run_in_thread, get_icon
+from pyWinAPI.guiddef_h import GUID
+from pyWinAPI.winerror_h import S_OK
 
-from __core_audio.constant import S_OK
-
-from __core_audio.audiopolicy import (
+from pyWinAPI.audiopolicy_h import (
     IAudioSessionEvents,
     IAudioSessionNotification,
     IAudioSessionControl2,
-    PIAudioSessionManager,
-    PIAudioSessionManager2
-)
-from __core_audio.enum import (
+    IAudioSessionManager,
+    IAudioSessionManager2,
+    IAudioSessionEnumerator,
     AudioSessionDisconnectReason,
-    AudioSessionState
-)
-from __core_audio.iid import (
+    AudioSessionState,
     IID_IAudioSessionManager,
     IID_IAudioSessionManager2
 )
-
 
 AUDIO_SESSION_STATE = {
     AudioSessionState.AudioSessionStateInactive: 'Inactive',
@@ -100,16 +96,29 @@ class AudioSessionManager(object):
         try:
             self.__session_manager = endpoint.activate(
                 IID_IAudioSessionManager2,
-                PIAudioSessionManager2
+                ctypes.POINTER(IAudioSessionManager2)
             )
         except comtypes.COMError:
             try:
                 self.__session_manager = endpoint.activate(
                     IID_IAudioSessionManager,
-                    PIAudioSessionManager
+                    ctypes.POINTER(IAudioSessionManager)
                 )
             except comtypes.COMError:
                 raise NotImplementedError
+
+    def get_simple_volume(self, guid):
+        return self.__session_manager.GetSimpleAudioVolume(
+            ctypes.byref(guid), 0
+        )
+
+    def get_session_control(self, id):
+        session_enum = self.__session_manager.GetSessionEnumerator()
+        for i in range(session_enum.GetCount()):
+            session = session_enum.GetSession(i)
+            session_control = session.QueryInterface(IAudioSessionControl2)
+            if session_control.GetSessionIdentifier() == id:
+                return session_control
 
     def update_sessions(self, callback=None):
 
@@ -119,37 +128,33 @@ class AudioSessionManager(object):
         event.wait(0.1)
 
         try:
-            try:
-                session_enum = self.__session_manager.GetSessionEnumerator()
-            except comtypes.COMError:
-                pass
+            session_enum = self.__session_manager.GetSessionEnumerator()
+            sessions = {}
 
-            else:
-                sessions = {}
+            for i in range(session_enum.GetCount()):
+                session = session_enum.GetSession(i)
+                session_control = session.QueryInterface(IAudioSessionControl2)
+                id = session_control.GetSessionIdentifier()
 
-                for i in range(session_enum.GetCount()):
-                    session = session_enum.GetSession(i)
-                    try:
-                        session = session.QueryInterface(IAudioSessionControl2)
-                    except comtypes.COMError:
-                        pass
+                if id in self.__sessions:
+                    sessions[id] = self.__sessions[id]
+                    del self.__sessions[id]
 
-                    if session in self.__sessions:
-                        sessions[session] = self.__sessions[session]
-                        del self.__sessions[session]
+                else:
+                    sessions[id] = AudioSession(self, id)
+                    if callback is not None:
+                        callback(sessions[id])
 
-                    else:
-                        sessions[session] = AudioSession(self, session)
-                        if callback is not None:
-                            callback(sessions[session])
+            for session in self.__sessions.values():
+                session.release()
 
-                for session in self.__sessions.values():
-                    session.release()
+            self.__sessions.clear()
 
-                self.__sessions.clear()
+            for key, value in sessions.items():
+                self.__sessions[key] = value
+        except comtypes.COMError:
+            pass
 
-                for key, value in sessions.items():
-                    self.__sessions[key] = value
         finally:
             self.__update_lock.release()
 
@@ -180,20 +185,18 @@ class AudioSessionManager(object):
     def __iter__(self):
         try:
             session_enum = self.__session_manager.GetSessionEnumerator()
+
+            for i in range(session_enum.GetCount()):
+                session = session_enum.GetSession(i)
+                session_control = session.QueryInterface(IAudioSessionControl2)
+                id = session_control.GetSessionIdentifier()
+
+                if id not in self.__sessions:
+                    self.__sessions[id] = AudioSession(self, id)
+
+                yield self.__sessions[id]
         except comtypes.COMError:
-            raise TypeError
-
-        for i in range(session_enum.GetCount()):
-            session = session_enum.GetSession(i)
-            try:
-                session = session.QueryInterface(IAudioSessionControl2)
-            except comtypes.COMError:
-                pass
-
-            if session not in self.__sessions:
-                self.__sessions[session] = AudioSession(self, session)
-
-            yield self.__sessions[session]
+            pass
 
 
 class AudioSessionEvent(comtypes.COMObject):
@@ -305,25 +308,29 @@ class AudioSessionEvent(comtypes.COMObject):
 
     def OnStateChanged(self, NewState):
 
-        def do():
+        def do(state):
             self.__callback.session_state_changed(
                 self.__session,
-                AUDIO_SESSION_STATE[NewState]
+                AUDIO_SESSION_STATE[state]
             )
 
-        run_in_thread(do)
+        run_in_thread(do, NewState)
 
         return S_OK
 
 
 class AudioSession(object):
 
-    def __init__(self, session_manager, session):
+    def __init__(self, session_manager, id):
         self.__session_manager = session_manager
-        self.__session = session
+        self.__id = id
 
     def release(self):
-        del self.__session
+        pass
+
+    @property
+    def __session(self):
+        return self.__session_manager.get_session_control(self.__id)
 
     @property
     def session_manager(self):
@@ -369,10 +376,7 @@ class AudioSession(object):
 
     @property
     def id(self):
-        try:
-            return self.__session.GetSessionIdentifier()
-        except comtypes.COMError:
-            raise AttributeError
+        return self.__id
 
     @property
     def instance_id(self):
@@ -380,6 +384,28 @@ class AudioSession(object):
             return self.__session.GetSessionInstanceIdentifier()
         except comtypes.COMError:
             raise AttributeError
+
+    @property
+    def __simple_volume(self):
+        return self.__session_manager.get_simple_volume(
+            GUID('{' + self.id.rsplit('{')[-1])
+        )
+
+    @property
+    def volume(self):
+        return self.__simple_volume.GetMasterVolume() * 100.0
+
+    @volume.setter
+    def volume(self, level):
+        self.__simple_volume.SetMasterVolume(float(level / 100.0), None)
+
+    @property
+    def mute(self):
+        return self.__simple_volume.GetMute()
+
+    @mute.setter
+    def mute(self, mute):
+        self.__simple_volume.SetMute(mute, None)
 
     @property
     def is_system_sounds(self):

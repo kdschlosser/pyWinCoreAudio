@@ -16,16 +16,15 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-from __core_audio.constant import (
-    JACKDESC2_PRESENCE_DETECT_CAPABILITY,
-    JACKDESC2_DYNAMIC_FORMAT_CHANGE_CAPABILITY
-)
-from __core_audio.enum import (
+
+from pyWinAPI.devicetopology_h import (
     KSJACK_SINK_CONNECTIONTYPE,
     EPcxGenLocation,
     EPcxGeoLocation,
     EPcxConnectionType,
-    EPxcPortConnection
+    EPxcPortConnection,
+    JACKDESC2_PRESENCE_DETECT_CAPABILITY,
+    JACKDESC2_DYNAMIC_FORMAT_CHANGE_CAPABILITY
 )
 from speaker import AudioSpeakers
 from utils import convert_triplet_to_rgb

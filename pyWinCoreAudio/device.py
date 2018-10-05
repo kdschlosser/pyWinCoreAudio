@@ -18,37 +18,49 @@
 
 
 import comtypes
+import ctypes
 from singleton import Singleton
 from endpoint import AudioEndpoint
 from parts import AudioDeviceConnection
 from utils import run_in_thread, get_icon
 
-from __core_audio.mmdeviceapi import (
+from pyWinAPI.winerror_h import (
+    S_OK
+)
+from pyWinAPI.mmdeviceapi_h import (
+    DEVICE_STATE_ACTIVE,
+    DEVICE_STATE_DISABLED,
+    DEVICE_STATE_NOTPRESENT,
+    DEVICE_STATE_UNPLUGGED,
+    DEVICE_STATEMASK_ALL,
+    STGM_READ,
+    CLSID_MMDeviceEnumerator,
     IMMDeviceEnumerator,
-    IMMNotificationClient
-)
-from __core_audio.devicetopologyapi import (
-    PIDeviceTopology,
-    IPart
-)
-from __core_audio.enum import (
-    AudioDeviceState,
+    IMMNotificationClient,
     EDataFlow,
     ERole
 )
-from __core_audio.iid import (
+from pyWinAPI.devicetopology_h import (
     IID_IDeviceTopology,
-    CLSID_MMDeviceEnumerator
+    IDeviceTopology,
+    IPart
 )
-from __core_audio.constant import (
-    S_OK,
+from pyWinAPI.wtypes_h import ENUM
+
+from pyWinAPI.functiondiscoverykeys_devpkey_h import (
     PKEY_DeviceInterface_FriendlyName,
-    DEVPKEY_DeviceClass_IconPath,
-    STGM_READ,
-    DEVICE_STATE_MASK_ALL
+    PKEY_DeviceClass_IconPath
 )
 
 CLSCTX_INPROC_SERVER = comtypes.CLSCTX_INPROC_SERVER
+
+
+class AudioDeviceState(ENUM):
+    Active = DEVICE_STATE_ACTIVE
+    Disabled = DEVICE_STATE_DISABLED
+    NotPresent = DEVICE_STATE_NOTPRESENT
+    Unplugged = DEVICE_STATE_UNPLUGGED
+
 
 AUDIO_DEVICE_STATE = {
     AudioDeviceState.Active:     'Active',
@@ -76,7 +88,7 @@ class AudioDevice(object):
                 IID_IDeviceTopology,
                 CLSCTX_INPROC_SERVER
             ),
-            PIDeviceTopology
+            ctypes.POINTER(IDeviceTopology)
         )
 
     @property
@@ -84,9 +96,9 @@ class AudioDevice(object):
         name = self.name
         for endpoint in self.__device_enum.endpoints:
 
-            pStore = endpoint.OpenPropertyStore(STGM_READ)
+            p_store = endpoint.OpenPropertyStore(STGM_READ)
             try:
-                item_name = pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
+                item_name = p_store.GetValue(PKEY_DeviceInterface_FriendlyName)
             except comtypes.COMError:
                 continue
 
@@ -120,17 +132,17 @@ class AudioDevice(object):
 
     @property
     def icon(self):
-        pStore = self.__device.OpenPropertyStore(STGM_READ)
+        p_store = self.__device.OpenPropertyStore(STGM_READ)
         try:
-            return get_icon(pStore.GetValue(DEVPKEY_DeviceClass_IconPath))
+            return get_icon(p_store.GetValue(PKEY_DeviceClass_IconPath))
         except comtypes.COMError:
             pass
 
     @property
     def name(self):
-        pStore = self.__device.OpenPropertyStore(STGM_READ)
+        p_store = self.__device.OpenPropertyStore(STGM_READ)
         try:
-            return pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
+            return p_store.GetValue(PKEY_DeviceInterface_FriendlyName)
         except comtypes.COMError:
             pass
 
@@ -149,9 +161,9 @@ class AudioDevice(object):
         for i in range(endpoint_enum.GetCount()):
             endpoint = endpoint_enum.Item(i)
 
-            pStore = endpoint.OpenPropertyStore(STGM_READ)
+            p_store = endpoint.OpenPropertyStore(STGM_READ)
             try:
-                name = pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
+                name = p_store.GetValue(PKEY_DeviceInterface_FriendlyName)
             except comtypes.COMError:
                 continue
 
@@ -199,7 +211,7 @@ class AudioDeviceEnumerator(object):
     def endpoints(self):
         endpoint_enum = self.__device_enum.EnumAudioEndpoints(
             EDataFlow.eAll,
-            DEVICE_STATE_MASK_ALL
+            DEVICE_STATEMASK_ALL
         )
 
         for i in range(endpoint_enum.GetCount()):
@@ -208,7 +220,7 @@ class AudioDeviceEnumerator(object):
     def endpoint_enum(self, data_flow):
         return self.__device_enum.EnumAudioEndpoints(
             data_flow,
-            DEVICE_STATE_MASK_ALL
+            DEVICE_STATEMASK_ALL
         )
 
 
@@ -227,7 +239,7 @@ class AudioNotificationClient(comtypes.COMObject):
                 IID_IDeviceTopology,
                 CLSCTX_INPROC_SERVER
             ),
-            PIDeviceTopology
+            ctypes.POINTER(IDeviceTopology)
         )
 
         return AudioDevice(

@@ -17,15 +17,16 @@
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
 import comtypes
-from __core_audio.enum import (
+import ctypes
+from pyWinAPI.mmdeviceapi_h import ERole
+from pyWinAPI.devicetopology_h import (
     ConnectorType,
-    ERole,
-    PartType
-)
-from __core_audio.devicetopologyapi import (
+    PartType,
     IPart,
+    IConnector,
+IDeviceTopology,
+IID_IDeviceTopology
 )
-
 
 CLSCTX_INPROC_SERVER = comtypes.CLSCTX_INPROC_SERVER
 
@@ -57,8 +58,28 @@ class AudioDeviceSubunit(object):
 
 class AudioDeviceConnection(object):
 
-    def __init__(self, connector):
-        self.__connector = connector
+    def __init__(self, endpoint):
+        self._endpoint = endpoint
+
+        # self.__connector = ctypes.cast(
+        #             connector,
+        #    ctypes.POINTER(IConnector)
+        # )
+
+    @property
+    def __connector(self):
+        if isinstance(self._endpoint, AudioDeviceConnection):
+            return self._endpoint._endpoint.GetConnectedTo()
+        else:
+
+            device_topology = ctypes.cast(
+                self._endpoint.Activate(
+                    IID_IDeviceTopology,
+                    CLSCTX_INPROC_SERVER
+                ),
+                ctypes.POINTER(IDeviceTopology)
+            )
+            return device_topology.GetConnector(0)
 
     @property
     def type(self):
@@ -78,7 +99,7 @@ class AudioDeviceConnection(object):
 
     @property
     def connected_to(self):
-        return AudioDeviceConnection(self.__connector.GetConnectedTo())
+        return AudioDeviceConnection(self) # .__connector.GetConnectedTo()
 
     @connected_to.setter
     def connected_to(self, connection):

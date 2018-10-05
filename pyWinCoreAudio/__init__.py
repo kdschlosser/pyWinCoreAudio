@@ -1,16 +1,19 @@
 
 import comtypes
+import ctypes
 from endpoint import AudioDefaultEndpoint
-from __core_audio.enum import EDataFlow
-from __core_audio.devicetopologyapi import PIDeviceTopology
-from __core_audio.iid import IID_IDeviceTopology
+from pyWinAPI.mmdeviceapi_h import EDataFlow
+from pyWinAPI.devicetopology_h import IDeviceTopology
+from pyWinAPI.devicetopology_h import IID_IDeviceTopology
 from device import (
     AudioDevice,
     AudioDeviceEnumerator,
     AudioNotificationClient
 )
-from __core_audio.constant import (
+from pyWinAPI.functiondiscoverykeys_devpkey_h import (
     PKEY_DeviceInterface_FriendlyName,
+)
+from pyWinAPI.mmdeviceapi_h import (
     STGM_READ
 )
 
@@ -71,7 +74,7 @@ class AudioDevices(object):
                         IID_IDeviceTopology,
                         CLSCTX_INPROC_SERVER
                     ),
-                    PIDeviceTopology
+                    ctypes.POINTER(IDeviceTopology)
                 )
 
                 yield AudioDevice(
@@ -110,6 +113,7 @@ def stop():
 
 if __name__ == '__main__':
     registered_volume_callbacks = {}
+    audio_sessions = {}
 
     import threading
     print_lock = threading.Lock()
@@ -122,19 +126,19 @@ if __name__ == '__main__':
             session_device = session_endpoint.device
             print_lock.acquire()
 
-            print 'audio session created'
-            print '    device name:', session_device.name
-            print '    endpoint name:', session_endpoint.name
-            print '    name:', new_session.name
-            print '    id:', new_session.id
-            print '    instance id:', new_session.instance_id
-            print '    process id:', new_session.process_id
-            print '    is system sounds:', new_session.is_system_sounds
-            print '    grouping param:', new_session.grouping_param
-            print '    icon:', new_session.icon
-            print '    state:', new_session.state
-            print
-            print
+            print('audio session created')
+            print('    device name:', session_device.name)
+            print('    endpoint name:', session_endpoint.name)
+            print('    name:', new_session.name)
+            print('    id:', new_session.id)
+            print('    instance id:', new_session.instance_id)
+            print('    process id:', new_session.process_id)
+            print('    is system sounds:', new_session.is_system_sounds)
+            print('    grouping param:', new_session.grouping_param)
+            print('    icon:', new_session.icon)
+            print('    state:', new_session.state)
+            print()
+            print()
             print_lock.release()
 
             new_session.register_notification_callback(Callbacks)
@@ -146,12 +150,12 @@ if __name__ == '__main__':
 
             print_lock.acquire()
 
-            print 'audio session name changed'
-            print '    device name:', session_device.name
-            print '    endpoint name:', session_endpoint.name
-            print '    name:', new_name
-            print
-            print
+            print('audio session name changed')
+            print('    device name:', session_device.name)
+            print('    endpoint name:', session_endpoint.name)
+            print('    name:', new_name)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
@@ -161,13 +165,13 @@ if __name__ == '__main__':
 
             print_lock.acquire()
 
-            print 'audio session grouping changed'
-            print '    device name:', session_device.name
-            print '    endpoint name:', session_endpoint.name
-            print '    name:', session.name
-            print '    grouping param:', new_group
-            print
-            print
+            print('audio session grouping changed')
+            print('    device name:', session_device.name)
+            print('    endpoint name:', session_endpoint.name)
+            print('    name:', session.name)
+            print('    grouping param:', new_group)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
@@ -177,14 +181,14 @@ if __name__ == '__main__':
 
             print_lock.acquire()
 
-            print 'audio session icon path changed'
-            print '    device name:', session_device.name
-            print '    endpoint name:', session_endpoint.name
-            print '    name:', session.name
-            print '    icon path:', new_path
-            print '    icon:', session.icon
-            print
-            print
+            print('audio session icon path changed')
+            print('    device name:', session_device.name)
+            print('    endpoint name:', session_endpoint.name)
+            print('    name:', session.name)
+            print('    icon path:', new_path)
+            print('    icon:', session.icon)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
@@ -194,18 +198,21 @@ if __name__ == '__main__':
             session_id,
             disconnect_reason
         ):
+            if session_id in audio_sessions:
+                del audio_sessions[session_id]
+
             session_device = session_endpoint.device
 
             print_lock.acquire()
 
-            print 'audio session disconnected'
-            print '    device name:', session_device.name
-            print '    endpoint name:', session_device.name
-            print '    name:', session_name
-            print '    id:', session_id
-            print '    disconnect reason:', disconnect_reason
-            print
-            print
+            print('audio session disconnected')
+            print('    device name:', session_device.name)
+            print('    endpoint name:', session_device.name)
+            print('    name:', session_name)
+            print('    id:', session_id)
+            print('    disconnect reason:', disconnect_reason)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
@@ -215,14 +222,14 @@ if __name__ == '__main__':
 
             print_lock.acquire()
 
-            print 'audio session volume changed'
-            print '    device name:', session_device.name
-            print '    endpoint name:', session_endpoint.name
-            print '    name:', session.name
-            print '    volume:', new_volume
-            print '    mute:', mute
-            print
-            print
+            print('audio session volume changed')
+            print('    device name:', session_device.name)
+            print('    endpoint name:', session_endpoint.name)
+            print('    name:', session.name)
+            print('    volume:', new_volume)
+            print('    mute:', mute)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
@@ -232,17 +239,17 @@ if __name__ == '__main__':
 
             print_lock.acquire()
 
-            print 'audio session state changed'
-            print '    device name:', session_device.name
-            print '    endpoint name:', session_endpoint.name
-            print '    name:', session.name
-            print '    id:', session.id
-            print '    instance id:', session.instance_id
-            print '    process id:', session.process_id
-            print '    is system sounds:', session.is_system_sounds
-            print '    state:', state
-            print
-            print
+            print('audio session state changed')
+            print('    device name:', session_device.name)
+            print('    endpoint name:', session_endpoint.name)
+            print('    name:', session.name)
+            print('    id:', session.id)
+            print('    instance id:', session.instance_id)
+            print('    process id:', session.process_id)
+            print('    is system sounds:', session.is_system_sounds)
+            print('    state:', state)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
@@ -254,124 +261,125 @@ if __name__ == '__main__':
         ):
             print_lock.acquire()
 
-            print 'endpoint volume change'
-            print '    device name:', endpoint.device.name
-            print '    endpoint name:', endpoint.name
-            print '    master:', str(master_volume * 100) + '%'
-            print '    mute:', mute
+            print('endpoint volume change')
+            print('    device name:', endpoint.device.name)
+            print('    endpoint name:', endpoint.name)
+            print('    master:', str(master_volume * 100) + '%')
+            print('    mute:', mute)
             for i, level in enumerate(channel_volumes):
-                print '    channel %d level:' % i, str(level * 100) + '%'
+                print('    channel %d level:' % i, str(level * 100) + '%')
 
-            print
-            print
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
         def device_state_change(device, state):
             print_lock.acquire()
 
-            print 'device state change'
-            print '    device name:', device.name
-            print '    state:', state
-            print
-            print
+            print('device state change')
+            print('    device name:', device.name)
+            print('    state:', state)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
         def device_added(device):
             print_lock.acquire()
 
-            print 'device added'
-            print '    device name:', device.name
-            print
-            print
+            print('device added')
+            print('    device name:', device.name)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
         def device_removed(device):
             print_lock.acquire()
 
-            print 'device removed'
-            print '    device name:', device.name
-            print
-            print
+            print('device removed')
+            print('    device name:', device.name)
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
         def default_endpoint_changed(device):
             print_lock.acquire()
 
-            print 'default endpoint changed'
-            print '    device name:', device.name
+            print('default endpoint changed')
+            print('    device name:', device.name)
 
-            for endpoint in device:
+            for edpt in device:
                 if (
-                    endpoint.is_default and
-                    endpoint not in registered_volume_callbacks
+                    edpt.is_default and
+                    edpt.id not in registered_volume_callbacks
                 ):
-                    print '    endpoint name:', endpoint.name
+                    print('    endpoint name:', edpt.name)
                     try:
-                        volume = endpoint.volume
+                        volume = edpt.volume
                         callback = volume.register_volume_change_callback(
                             Callbacks.endpoint_volume_change
                         )
-                        registered_volume_callbacks[endpoint] = callback
+                        registered_volume_callbacks[edpt.id] = callback
                         break
 
                     except AttributeError:
                         pass
-            print
-            print
+            print()
+            print()
             print_lock.release()
 
         @staticmethod
         def device_property_changed(device, key):
             print_lock.acquire()
 
-            print 'device property changed'
-            print '    device name:', device.name
-            print '    key:', key.fmtid, key.pid
-            print
-            print
+            print('device property changed')
+            print('    device name:', device.name)
+            print('    key:', key.fmtid, key.pid)
+            print()
+            print()
             print_lock.release()
 
     def test():
+        print_lock.acquire()
         for device in AudioDevices:
-            print
-            print
-            print
-            print 'device name:', device.name
-            print '======================================================='
-            print '    icon:', device.icon
-            print '    id:', device.id
-            print '    connector count:', device.connector_count
-            print '    state:', device.state
+            print()
+            print()
+            print()
+            print('device name:', device.name)
+            print('=======================================================')
+            print('    icon:', device.icon)
+            print('    id:', device.id)
+            print('    connector count:', device.connector_count)
+            print('    state:', device.state)
             for endpoint in device:
                 full_range_speakers = endpoint.full_range_speakers
-                print
-                print '    endpoint name:', endpoint.name
-                print '    ---------------------------------------------------'
-                print '        description:', endpoint.description
-                print '        icon:', endpoint.icon
-                print '        data flow:', endpoint.data_flow
-                print '        form factor:', endpoint.form_factor
-                print '        type:', endpoint.form_factor
-                print '        full range speakers:', full_range_speakers
-                print '        guid:', endpoint.guid
-                print '        physical speakers:', endpoint.physical_speakers
-                print '        system effects:', endpoint.system_effects
+                print()
+                print('    endpoint name:', endpoint.name)
+                print('    ---------------------------------------------------')
+                print('        description:', endpoint.description)
+                print('        icon:', endpoint.icon)
+                print('        data flow:', endpoint.data_flow)
+                print('        form factor:', endpoint.form_factor)
+                print('        type:', endpoint.form_factor)
+                print('        full range speakers:', full_range_speakers)
+                print('        guid:', endpoint.guid)
+                print('        physical speakers:', endpoint.physical_speakers)
+                print('        system effects:', endpoint.system_effects)
                 try:
                     sink = endpoint.jack_information
                 except AttributeError:
                     pass
                 else:
-                    print '        manufacturer id:', sink.manufacturer_id
-                    print '        product id:', sink.product_id
-                    print '        audio latency:', sink.audio_latency
-                    print '        hdcp capable:', sink.hdcp_capable
-                    print '        ai capable:', sink.ai_capable
-                    print '        description:', sink.description
-                    print '        connection type:', sink.connection_type
+                    print('        manufacturer id:', sink.manufacturer_id)
+                    print('        product id:', sink.product_id)
+                    print('        audio latency:', sink.audio_latency)
+                    print('        hdcp capable:', sink.hdcp_capable)
+                    print('        ai capable:', sink.ai_capable)
+                    print('        description:', sink.description)
+                    print('        connection type:', sink.connection_type)
 
                 try:
                     session_manager = endpoint.session_manager
@@ -379,18 +387,18 @@ if __name__ == '__main__':
                     pass
                 else:
                     session_manager.register_notification_callback(Callbacks)
-                    print '        sessions'
+                    print('        sessions')
                     try:
                         sessions = list(session_manager)
                     except TypeError:
                         pass
                     else:
                         def p(attr_name, v):
-                            print '               ', attr_name, v
+                            print('               ', attr_name, v)
 
                         for i, session in enumerate(sessions):
                             session.register_notification_callback(Callbacks)
-                            print '            session %d' % i
+                            print('            session %d' % i)
                             p('name:', session.name)
                             p('id:', session.id)
                             p('instance id:', session.instance_id)
@@ -399,16 +407,20 @@ if __name__ == '__main__':
                             p('grouping param:', session.grouping_param)
                             p('icon:', session.icon)
                             p('state:', session.state)
+
+                            if session.id not in audio_sessions:
+                                audio_sessions[session.id] = []
+                            audio_sessions[session.id] += [session]
                 try:
                     jacks = list(jack for jack in endpoint.jack_descriptions)
-                    print
-                    print '        connectors'
+                    print()
+                    print('        connectors')
 
                     def p(attr, v):
-                        print '               ', attr, v
+                        print('               ', attr, v)
 
                     for i, jack in enumerate(jacks):
-                        print '            %d:' % i
+                        print('            %d:' % i)
                         p('channel mapping:', jack.channel_mapping)
                         p('color:', jack.color)
                         p('type:', jack.type)
@@ -422,80 +434,81 @@ if __name__ == '__main__':
 
                 try:
                     volume = endpoint.volume
-                    print
+                    print()
                 except AttributeError:
                     pass
                 else:
                     scalar = volume.master_scalar
-                    print '        volume'
-                    print '            master level:', volume.master
-                    print '            master level scalar:', scalar
+                    print('        volume')
+                    print('            master level:', volume.master)
+                    print('            master level scalar:', scalar)
                     m_min, m_max, m_step = volume.range
-                    print '            master min:', m_min
-                    print '            master max:', m_max
-                    print '            master step:', m_step
+                    print('            master min:', m_min)
+                    print('            master max:', m_max)
+                    print('            master step:', m_step)
                     try:
                         mute = volume.mute
-                        print '            mute:', mute
+                        print('            mute:', mute)
                     except AttributeError:
                         pass
-                    print '            channel count:', volume.channel_count
-                    print
-                    print '            channel levels'
+                    print('            channel count:', volume.channel_count)
+                    print()
+                    print('            channel levels')
                     levels = volume.channel_levels
                     scalars = volume.channel_levels_scalar
                     ranges = volume.channel_ranges
                     for i, level in enumerate(levels):
-                        print '                %d:' % i
-                        print '                    level:', level
-                        print '                    scalar level:', scalars[i]
+                        print('                %d:' % i)
+                        print('                    level:', level)
+                        print('                    scalar level:', scalars[i])
                         c_min, c_max, c_step = ranges[i]
-                        print '                    min:', c_min
-                        print '                    max:', c_max
-                        print '                    step:', c_step
+                        print('                    min:', c_min)
+                        print('                    max:', c_max)
+                        print('                    step:', c_step)
                     try:
                         peak_meter = volume.peak_meter
-                        print
-                        print '            peak meter'
-                        print '                master:', peak_meter.peak_value
-                        print '                channels'
+                        print()
+                        print('            peak meter')
+                        print('                master:', peak_meter.peak_value)
+                        print('                channels')
                         peak_values = peak_meter.channel_peak_values
                         for i, value in enumerate(peak_values):
-                            print '                    %d:' % i
-                            print '                        level:', value
+                            print('                    %d:' % i)
+                            print('                        level:', value)
 
                     except AttributeError:
                         pass
 
-        print
-        print
+        print()
+        print()
         default_render = AudioDevices.default_render_endpoint
-        print 'default render device:', default_render.device.name
-        print 'default render endpoint:', default_render.name
-        print 'default render endpoint volume:', str(
+        print('default render device:', default_render.device.name)
+        print('default render endpoint:', default_render.name)
+        print('default render endpoint volume:', str(
             default_render.volume.master_scalar * 100
-        ) + '%'
+        ) + '%')
 
         default_capture = AudioDevices.default_capture_endpoint
-        print 'default capture device:', default_capture.device.name
-        print 'default capture endpoint:', default_capture.name
-        print 'default capture endpoint volume:', str(
+        print('default capture device:', default_capture.device.name)
+        print('default capture endpoint:', default_capture.name)
+        print('default capture endpoint volume:', str(
             default_capture.volume.master_scalar * 100
-        ) + '%'
+        ) + '%')
 
-        registered_volume_callbacks[default_render] = (
+        registered_volume_callbacks[default_render.id] = (
             default_render.volume.register_notification_callback(Callbacks)
         )
-        registered_volume_callbacks[default_capture] = (
+        registered_volume_callbacks[default_capture.id] = (
             default_capture.volume.register_notification_callback(Callbacks)
         )
 
         AudioDevices.register_notification_callback(Callbacks)
 
-        print
-        print
+        print()
+        print()
+        print_lock.release()
 
-        raw_input(
+        input(
             'Change the volume.\n'
             'Set the mute.\n'
             'Change the default device.\n'

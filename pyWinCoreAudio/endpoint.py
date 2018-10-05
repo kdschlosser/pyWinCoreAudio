@@ -18,9 +18,10 @@
 
 
 import comtypes
+import ctypes
 from singleton import Singleton
 from utils import get_icon
-from __core_audio.audioclient import PIAudioClient
+from pyWinAPI.audioclient_h import IAudioClient, IID_IAudioClient
 from session import AudioSessionManager
 from speaker import AudioSpeakers
 from volume import AudioVolume
@@ -33,34 +34,44 @@ from parts import (
     AudioDeviceSubunit,
 )
 
-from __core_audio.enum import (
+from pyWinAPI.mmdeviceapi_h import (
     EDataFlow,
     ERole,
     EndpointFormFactor,
+    CLSID_MMDeviceEnumerator
+)
+from pyWinAPI.audioengineendpoint_h import (
     EndpointConnectorType
 )
-from __core_audio.policyconfig import IPolicyConfigVista
 
-from __core_audio.mmdeviceapi import (
+from pyWinAPI.policyconfig_h import IPolicyConfig, CLSID_PolicyConfigClient
+
+from pyWinAPI.mmdeviceapi_h import (
     IMMDeviceEnumerator,
     IMMEndpoint,
+    PKEY_AudioEndpoint_Disable_SysFx,
+    PKEY_AudioEndpoint_PhysicalSpeakers,
+    PKEY_AudioEndpoint_GUID,
+    PKEY_AudioEndpoint_FullRangeSpeakers,
+    PKEY_AudioEndpoint_FormFactor,
+    PKEY_AudioEndpoint_JackSubType,
+    STGM_READ
 )
-from __core_audio.devicetopologyapi import (
-    PIDeviceTopology,
-    PIAudioBass,
-    PIKsJackDescription,
-    PIKsJackDescription2,
-    PIKsJackSinkInformation,
-    PIAudioOutputSelector,
-    PIAudioInputSelector,
-    PIAudioChannelConfig,
-    PIAudioAutoGainControl,
-    PIAudioPeakMeter,
-    PIAudioMidrange,
-    PIAudioLoudness,
-    PIAudioTreble,
-)
-from __core_audio.iid import (
+
+from pyWinAPI.devicetopology_h import (
+    IDeviceTopology,
+    IAudioBass,
+    IKsJackDescription,
+    IKsJackDescription2,
+    IKsJackSinkInformation,
+    IAudioOutputSelector,
+    IAudioInputSelector,
+    IAudioChannelConfig,
+    IAudioAutoGainControl,
+    IAudioPeakMeter,
+    IAudioMidrange,
+    IAudioLoudness,
+    IAudioTreble,
     IID_IAudioAutoGainControl,
     IID_IAudioBass,
     IID_IAudioChannelConfig,
@@ -70,26 +81,16 @@ from __core_audio.iid import (
     IID_IAudioOutputSelector,
     IID_IAudioPeakMeter,
     IID_IAudioTreble,
-    IID_IAudioClient,
     IID_IDeviceTopology,
     IID_IKsJackDescription,
     IID_IKsJackDescription2,
     IID_IKsJackSinkInformation,
-    CLSID_MMDeviceEnumerator,
-    CLSID_PolicyConfigVistaClient
 )
 
-from __core_audio.constant import (
+from pyWinAPI.functiondiscoverykeys_devpkey_h import (
     PKEY_Device_FriendlyName,
-    DEVPKEY_DeviceClass_IconPath,
     PKEY_Device_DeviceDesc,
-    PKEY_AudioEndpoint_Disable_SysFx,
-    PKEY_AudioEndpoint_PhysicalSpeakers,
-    PKEY_AudioEndpoint_GUID,
-    PKEY_AudioEndpoint_FullRangeSpeakers,
-    PKEY_AudioEndpoint_FormFactor,
-    PKEY_AudioEndpoint_JackSubType,
-    STGM_READ
+    PKEY_DeviceClass_IconPath
 )
 
 CLSCTX_INPROC_SERVER = comtypes.CLSCTX_INPROC_SERVER
@@ -162,7 +163,7 @@ class AudioDefaultEndpoint(object):
                 IID_IDeviceTopology,
                 CLSCTX_INPROC_SERVER
             ),
-            PIDeviceTopology
+            ctypes.POINTER(IDeviceTopology)
         )
 
         device = AudioDevice(
@@ -207,18 +208,19 @@ class AudioEndpoint(object):
 
     @property
     def __device_topology(self):
-        return comtypes.cast(
+        return ctypes.cast(
             self.__endpoint.Activate(
                 IID_IDeviceTopology,
                 CLSCTX_INPROC_SERVER
             ),
-            PIDeviceTopology
+            ctypes.POINTER(IDeviceTopology)
         )
 
     @property
     def __connector(self):
-        device_topology = self.__device_topology
-        return AudioDeviceConnection(device_topology.GetConnector(0))
+        # device_topology = self.__device_topology
+        return AudioDeviceConnection(self.__endpoint)
+            # device_topology.GetConnector(0))
 
     @property
     def __subunits(self):
@@ -234,7 +236,7 @@ class AudioEndpoint(object):
     def icon(self):
         pStore = self.__endpoint.OpenPropertyStore(STGM_READ)
         # try:
-        return get_icon(pStore.GetValue(DEVPKEY_DeviceClass_IconPath))
+        return get_icon(pStore.GetValue(PKEY_DeviceClass_IconPath))
         # except comtypes.COMError:
         #     pass
 
@@ -275,7 +277,6 @@ class AudioEndpoint(object):
                 part = subunit.part
                 try:
                     interface = part.activate(iid, pointer)
-                    print interface
                     return interface
                 except comtypes.COMError:
                     continue
@@ -295,8 +296,8 @@ class AudioEndpoint(object):
         )
 
         policy_config = comtypes.CoCreateInstance(
-            CLSID_PolicyConfigVistaClient,
-            IPolicyConfigVista,
+            CLSID_PolicyConfigClient,
+            IPolicyConfig,
             comtypes.CLSCTX_ALL
         )
 
@@ -314,7 +315,7 @@ class AudioEndpoint(object):
     def audio_client(self):
         return self.__activate(
             IID_IAudioClient,
-            PIAudioClient
+            ctypes.POINTER(IAudioClient)
         )
 
     @property
@@ -384,7 +385,7 @@ class AudioEndpoint(object):
         try:
             jack_description = part.activate(
                 IID_IKsJackDescription,
-                PIKsJackDescription
+                ctypes.POINTER(IKsJackDescription)
             )
         except comtypes.COMError:
             raise AttributeError
@@ -392,7 +393,7 @@ class AudioEndpoint(object):
         try:
             jack_description2 = part.activate(
                 IID_IKsJackDescription2,
-                PIKsJackDescription2
+                ctypes.POINTER(IKsJackDescription2)
             )
         except comtypes.COMError:
             jack_description2 = None
@@ -414,12 +415,11 @@ class AudioEndpoint(object):
             raise AttributeError
 
         part = conn_to.part
-
         try:
             return AudioJackSinkInformation(
                 part.activate(
                     IID_IKsJackSinkInformation,
-                    PIKsJackSinkInformation
+                    ctypes.POINTER(IKsJackSinkInformation)
                 )
             )
         except comtypes.COMError:
@@ -429,63 +429,63 @@ class AudioEndpoint(object):
     def auto_gain_control(self):
         return self.__get_interface(
             IID_IAudioAutoGainControl,
-            PIAudioAutoGainControl
+            ctypes.POINTER(IAudioAutoGainControl)
         )
 
     @property
     def bass(self):
         return self.__get_interface(
             IID_IAudioBass,
-            PIAudioBass
+            ctypes.POINTER(IAudioBass)
         )
 
     @property
     def channel_config(self):
         return self.__get_interface(
             IID_IAudioChannelConfig,
-            PIAudioChannelConfig
+            ctypes.POINTER(IAudioChannelConfig)
         )
 
     @property
     def input(self):
         return self.__get_interface(
             IID_IAudioInputSelector,
-            PIAudioInputSelector
+            ctypes.POINTER(IAudioInputSelector)
         )
 
     @property
     def loudness(self):
         return self.__get_interface(
             IID_IAudioLoudness,
-            PIAudioLoudness
+            ctypes.POINTER(IAudioLoudness)
         )
 
     @property
     def midrange(self):
         return self.__get_interface(
             IID_IAudioMidrange,
-            PIAudioMidrange
+            ctypes.POINTER(IAudioMidrange)
         )
 
     @property
     def output(self):
         return self.__get_interface(
             IID_IAudioOutputSelector,
-            PIAudioOutputSelector
+            ctypes.POINTER(IAudioOutputSelector)
         )
 
     @property
     def peak_meter(self):
         return self.__get_interface(
             IID_IAudioPeakMeter,
-            PIAudioPeakMeter
+            ctypes.POINTER(IAudioPeakMeter)
         )
 
     @property
     def treble(self):
         return self.__get_interface(
             IID_IAudioTreble,
-            PIAudioTreble
+            ctypes.POINTER(IAudioTreble)
         )
 
     @property

@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-from __core_audio.enum import EChannelMapping
-from __core_audio.constant import (
+from pyWinAPI.wtypes_h import ENUM
+from pyWinAPI.ksmedia_h import (
     KSAUDIO_SPEAKER_DIRECTOUT,
     KSAUDIO_SPEAKER_MONO,
     KSAUDIO_SPEAKER_1POINT1,
@@ -33,7 +33,18 @@ from __core_audio.constant import (
     KSAUDIO_SPEAKER_7POINT1,
     KSAUDIO_SPEAKER_5POINT1_SURROUND,
     KSAUDIO_SPEAKER_7POINT1_SURROUND,
+
 )
+
+
+class EChannelMapping(ENUM):
+    ePcxChanMap_FL_FR = 0,
+    ePcxChanMap_FC_LFE = 1
+    ePcxChanMap_BL_BR = 2
+    ePcxChanMap_FLC_FRC = 3
+    ePcxChanMap_SL_SR = 4
+    ePcxChanMap_Unknown = 5
+
 
 KSAUDIO_SPEAKER = {
     KSAUDIO_SPEAKER_DIRECTOUT: dict(

@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from .data_types import *
 import ctypes
 import comtypes
-from iid import (
+from .iid import (
     IID_ISpatialAudioMetadataItems,
     IID_ISpatialAudioMetadataWriter,
     IID_ISpatialAudioMetadataReader,
@@ -29,43 +30,19 @@ from iid import (
     IID_ISpatialAudioObjectForMetadataItems,
     IID_ISpatialAudioObjectRenderStreamForMetadata
 )
-from audioclient import PWAVEFORMATEX
-from enum import (
+from .audioclient import PWAVEFORMATEX
+from .enum_constants import (
     AUDIO_STREAM_CATEGORY,
     AudioObjectType,
     SpatialAudioMetadataCopyMode,
     SpatialAudioMetadataWriterOverflowMode
 )
-from mmdeviceapi import PPROPVARIANT
-from spatialaudioclient import (
+from .mmdeviceapi import PPROPVARIANT
+from .spatialaudioclient import (
     ISpatialAudioObjectBase,
     PISpatialAudioObjectRenderStreamNotify,
     ISpatialAudioObjectRenderStreamBase
 )
-from ctypes.wintypes import (
-    FLOAT,
-    UINT,
-    HANDLE,
-    BYTE,
-)
-
-GUID = comtypes.GUID
-COMMETHOD = comtypes.COMMETHOD
-HRESULT = ctypes.HRESULT
-HNSTIME = ctypes.c_longlong
-UINT8 = ctypes.c_uint8
-UINT16 = ctypes.c_uint16
-UINT32 = ctypes.c_uint32
-UINT64 = ctypes.c_uint64
-LONGLONG = ctypes.c_longlong
-FLOAT32 = FLOAT
-POINTER = ctypes.POINTER
-LPUINT16 = POINTER(UINT16)
-LPUINT32 = POINTER(UINT32)
-UINT_PTR = POINTER(UINT)
-LPVOID = POINTER(ctypes.c_void_p)
-LPBYTE = POINTER(BYTE)
-LPUINT8 = POINTER(UINT8)
 
 
 class SpatialAudioMetadataItemsInfo(ctypes.Structure):
@@ -103,7 +80,7 @@ PSpatialAudioObjectRenderStreamForMetadataActivationParams = POINTER(
 
 
 class ISpatialAudioMetadataItems(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioMetadataItems
     _methods_ = (
         COMMETHOD(
@@ -143,7 +120,7 @@ PISpatialAudioMetadataItems = POINTER(ISpatialAudioMetadataItems)
 
 
 class ISpatialAudioMetadataWriter(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioMetadataWriter
     _methods_ = (
         COMMETHOD(
@@ -178,7 +155,7 @@ PISpatialAudioMetadataWriter = POINTER(ISpatialAudioMetadataWriter)
 
 
 class ISpatialAudioMetadataReader(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioMetadataReader
     _methods_ = (
         COMMETHOD(
@@ -215,7 +192,7 @@ PISpatialAudioMetadataReader = POINTER(ISpatialAudioMetadataReader)
 
 
 class ISpatialAudioMetadataCopier(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioMetadataCopier
     _methods_ = (
         COMMETHOD(
@@ -245,7 +222,7 @@ PISpatialAudioMetadataCopier = POINTER(ISpatialAudioMetadataCopier)
 
 
 class ISpatialAudioMetadataItemsBuffer(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioMetadataItemsBuffer
     _methods_ = (
         COMMETHOD(
@@ -274,7 +251,7 @@ PISpatialAudioMetadataItemsBuffer = POINTER(ISpatialAudioMetadataItemsBuffer)
 
 
 class ISpatialAudioMetadataClient(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioMetadataClient
     _methods_ = (
         COMMETHOD(
@@ -323,7 +300,7 @@ PISpatialAudioMetadataClient = POINTER(ISpatialAudioMetadataClient)
 
 
 class ISpatialAudioObjectForMetadataCommands(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioObjectForMetadataCommands
     _methods_ = (
         COMMETHOD(
@@ -343,7 +320,7 @@ PISpatialAudioObjectForMetadataCommands = POINTER(
 
 
 class ISpatialAudioObjectForMetadataItems(ISpatialAudioObjectBase):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioObjectForMetadataItems
     _methods_ = (
         COMMETHOD(
@@ -363,7 +340,7 @@ PISpatialAudioObjectForMetadataItems = POINTER(
 class ISpatialAudioObjectRenderStreamForMetadata(
     ISpatialAudioObjectRenderStreamBase
 ):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioObjectRenderStreamForMetadata
     _methods_ = (
         COMMETHOD(

@@ -20,25 +20,26 @@
 import comtypes
 import ctypes
 import threading
-from utils import run_in_thread, get_icon
+from .utils import run_in_thread, get_icon
 
-from __core_audio.constant import S_OK
+from .__core_audio.constant import S_OK
 
-from __core_audio.audiopolicy import (
+from .__core_audio.audiopolicy import (
     IAudioSessionEvents,
     IAudioSessionNotification,
     IAudioSessionControl2,
     PIAudioSessionManager,
     PIAudioSessionManager2
 )
-from __core_audio.enum import (
+from .__core_audio.enum import (
     AudioSessionDisconnectReason,
     AudioSessionState
 )
-from __core_audio.iid import (
+from .__core_audio.iid import (
     IID_IAudioSessionManager,
     IID_IAudioSessionManager2
 )
+from . import utils
 
 
 AUDIO_SESSION_STATE = {
@@ -66,8 +67,7 @@ AUDIO_SESSION_DISCONNECT_REASON = {
     ),
     AudioSessionDisconnectReason.DisconnectReasonExclusiveModeOverride: (
         'Shared mode disabled'
-    ),
-
+    )
 }
 
 
@@ -183,17 +183,20 @@ class AudioSessionManager(object):
         except comtypes.COMError:
             raise TypeError
 
-        for i in range(session_enum.GetCount()):
-            session = session_enum.GetSession(i)
-            try:
-                session = session.QueryInterface(IAudioSessionControl2)
-            except comtypes.COMError:
-                pass
+        try:
+            for i in range(session_enum.GetCount()):
+                session = session_enum.GetSession(i)
+                try:
+                    session = session.QueryInterface(IAudioSessionControl2)
+                except comtypes.COMError:
+                    pass
 
-            if session not in self.__sessions:
-                self.__sessions[session] = AudioSession(self, session)
+                if session not in self.__sessions:
+                    self.__sessions[session] = AudioSession(self, session)
 
-            yield self.__sessions[session]
+                yield self.__sessions[session]
+        except ValueError:
+            pass
 
 
 class AudioSessionEvent(comtypes.COMObject):
@@ -239,7 +242,9 @@ class AudioSessionEvent(comtypes.COMObject):
         return S_OK
 
     def OnDisplayNameChanged(self, NewDisplayName, _):
-        if NewDisplayName == '@%SystemRoot%\System32\AudioSrv.Dll,-202':
+        NewDisplayName = utils.convert_to_string(NewDisplayName)
+
+        if NewDisplayName == r'@%SystemRoot%\System32\AudioSrv.Dll,-202':
             NewDisplayName = 'System Sounds'
 
         def do():
@@ -332,12 +337,25 @@ class AudioSession(object):
     @property
     def name(self):
         display_name = self.__session.GetDisplayName()
-        if display_name == '@%SystemRoot%\System32\AudioSrv.Dll,-202':
+        if not isinstance(display_name, str):
+            d_name = ''
+
+            for item in display_name:
+                if item == '\x00':
+                    break
+                d_name += item
+
+            display_name = d_name
+
+        if display_name == r'@%SystemRoot%\System32\AudioSrv.Dll,-202':
             display_name = 'System Sounds'
         return display_name
 
     @name.setter
     def name(self, name):
+        if isinstance(name, str):
+            name = name.encode('utf8')
+
         self.__session.SetDisplayName(name, None)
 
     @property
@@ -359,7 +377,8 @@ class AudioSession(object):
     @property
     def state(self):
         return AUDIO_SESSION_STATE[self.__session.GetState().value]
-
+'{DFF21CE1-F70F-11D0-B917-00A0C9223196}'
+'{DFF21CE1-F70F-11D0-B917-00A0C9223196}'
     @property
     def process_id(self):
         try:

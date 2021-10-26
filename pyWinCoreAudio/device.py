@@ -16,31 +16,31 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-
+import six
 import comtypes
-from singleton import Singleton
-from endpoint import AudioEndpoint
-from parts import AudioDeviceConnection
-from utils import run_in_thread, get_icon
+from .singleton import Singleton
+from .endpoint import AudioEndpoint
+from .parts import AudioDeviceConnection
+from .utils import run_in_thread, get_icon
 
-from __core_audio.mmdeviceapi import (
+from .__core_audio.mmdeviceapi import (
     IMMDeviceEnumerator,
     IMMNotificationClient
 )
-from __core_audio.devicetopologyapi import (
+from .__core_audio.devicetopologyapi import (
     PIDeviceTopology,
     IPart
 )
-from __core_audio.enum import (
+from .__core_audio.enum import (
     AudioDeviceState,
     EDataFlow,
     ERole
 )
-from __core_audio.iid import (
+from .__core_audio.iid import (
     IID_IDeviceTopology,
     CLSID_MMDeviceEnumerator
 )
-from __core_audio.constant import (
+from .__core_audio.constant import (
     S_OK,
     PKEY_DeviceInterface_FriendlyName,
     DEVPKEY_DeviceClass_IconPath,
@@ -58,8 +58,8 @@ AUDIO_DEVICE_STATE = {
 }
 
 
+@six.add_metaclass(Singleton)
 class AudioDevice(object):
-    __metaclass__ = Singleton
 
     def __init__(self, dev_id, device_enum):
         self.__id = dev_id
@@ -86,7 +86,7 @@ class AudioDevice(object):
 
             pStore = endpoint.OpenPropertyStore(STGM_READ)
             try:
-                item_name = pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
+                item_name = pStore.GetValue(PKEY_DeviceInterface_FriendlyName).decode('utf8')
             except comtypes.COMError:
                 continue
 
@@ -130,9 +130,14 @@ class AudioDevice(object):
     def name(self):
         pStore = self.__device.OpenPropertyStore(STGM_READ)
         try:
-            return pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
+            val = pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
+            if not isinstance(val, str):
+                val = val.decode('utf8')
+
+            return val
+
         except comtypes.COMError:
-            pass
+            return ''
 
     @property
     def render_endpoints(self):
@@ -152,6 +157,9 @@ class AudioDevice(object):
             pStore = endpoint.OpenPropertyStore(STGM_READ)
             try:
                 name = pStore.GetValue(PKEY_DeviceInterface_FriendlyName)
+                if not isinstance(name, str):
+                    name = name.decode('utf8')
+
             except comtypes.COMError:
                 continue
 

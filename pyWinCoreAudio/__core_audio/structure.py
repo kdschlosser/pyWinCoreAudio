@@ -16,27 +16,10 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from .mmdeviceapi import PIMMDevice
+from .data_types import *
+
 import ctypes
-from comtypes import GUID
-from mmdeviceapi import PIMMDevice
-
-from ctypes.wintypes import (
-    FLOAT,
-    UINT,
-    LPARAM,
-    ULONG,
-    DWORD,
-)
-
-
-HNSTIME = ctypes.c_longlong
-UINT32 = ctypes.c_uint32
-UINT64 = ctypes.c_uint64
-LONGLONG = ctypes.c_longlong
-FLOAT32 = FLOAT
-POINTER = ctypes.POINTER
-
-UINT_PTR = POINTER(UINT)
 
 
 class AudioExtensionParams(ctypes.Structure):
@@ -103,6 +86,7 @@ class KSIDENTIFIER_STRUCTURE(ctypes.Structure):
 
 
 class KSIDENTIFIER_UNION(ctypes.Union):
+    _anonymous_ = ('struct',)
     _fields_ = [
         ('struct', KSIDENTIFIER_STRUCTURE)
     ]
@@ -112,6 +96,7 @@ PKSIDENTIFIER_STRUCTURE = POINTER(KSIDENTIFIER_STRUCTURE)
 
 
 class KSIDENTIFIER(ctypes.Structure):
+    _anonymous_ = ('union',)
     _fields_ = [
         ('Alignment', LONGLONG),
         ('union', KSIDENTIFIER_UNION)

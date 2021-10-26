@@ -17,35 +17,36 @@
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
 
+import six
 import comtypes
-from singleton import Singleton
-from utils import get_icon
-from __core_audio.audioclient import PIAudioClient
-from session import AudioSessionManager
-from speaker import AudioSpeakers
-from volume import AudioVolume
-from jack import (
+from .singleton import Singleton
+from .utils import get_icon
+from .__core_audio.audioclient import PIAudioClient
+from .session import AudioSessionManager
+from .speaker import AudioSpeakers
+from .volume import AudioVolume
+from .jack import (
     AudioJackDescription,
     AudioJackSinkInformation
 )
-from parts import (
+from .parts import (
     AudioDeviceConnection,
     AudioDeviceSubunit,
 )
 
-from __core_audio.enum import (
+from .__core_audio.enum import (
     EDataFlow,
     ERole,
     EndpointFormFactor,
     EndpointConnectorType
 )
-from __core_audio.policyconfig import IPolicyConfigVista
+from .__core_audio.policyconfig import IPolicyConfigVista
 
-from __core_audio.mmdeviceapi import (
+from .__core_audio.mmdeviceapi import (
     IMMDeviceEnumerator,
     IMMEndpoint,
 )
-from __core_audio.devicetopologyapi import (
+from .__core_audio.devicetopologyapi import (
     PIDeviceTopology,
     PIAudioBass,
     PIKsJackDescription,
@@ -60,7 +61,7 @@ from __core_audio.devicetopologyapi import (
     PIAudioLoudness,
     PIAudioTreble,
 )
-from __core_audio.iid import (
+from .__core_audio.iid import (
     IID_IAudioAutoGainControl,
     IID_IAudioBass,
     IID_IAudioChannelConfig,
@@ -79,7 +80,7 @@ from __core_audio.iid import (
     CLSID_PolicyConfigVistaClient
 )
 
-from __core_audio.constant import (
+from .__core_audio.constant import (
     PKEY_Device_FriendlyName,
     DEVPKEY_DeviceClass_IconPath,
     PKEY_Device_DeviceDesc,
@@ -98,7 +99,6 @@ E_DATA_FLOW = {
     EDataFlow.eRender:              'Render',
     EDataFlow.eCapture:             'Capture',
     EDataFlow.eAll:                 'All',
-    EDataFlow.EDataFlow_enum_count: 'EDataFlow_enum_count'
 }
 
 
@@ -127,9 +127,6 @@ ENDPOINT_FORM_FACTOR = {
     ),
     EndpointFormFactor.UnknownDigitalPassthrough:     (
         'Unknown Digital Passthrough'
-    ),
-    EndpointFormFactor.EndpointFormFactor_enum_count: (
-        'EndpointFormFactor_enum_count'
     )
 }
 
@@ -153,7 +150,7 @@ class AudioDefaultEndpoint(object):
 
     @property
     def __default_endpoint(self):
-        from device import AudioDevice
+        from .device import AudioDevice
 
         endpoint = self.__device_enum.default_endpoint(self.__data_flow)
 
@@ -190,8 +187,8 @@ class AudioDefaultEndpoint(object):
         raise AttributeError
 
 
+@six.add_metaclass(Singleton)
 class AudioEndpoint(object):
-    __metaclass__ = Singleton
 
     def __init__(
         self,
@@ -275,7 +272,7 @@ class AudioEndpoint(object):
                 part = subunit.part
                 try:
                     interface = part.activate(iid, pointer)
-                    print interface
+                    # print(interface)
                     return interface
                 except comtypes.COMError:
                     continue
@@ -335,7 +332,11 @@ class AudioEndpoint(object):
     @property
     def name(self):
         """Return an endpoint devices FriendlyName."""
-        return self.__property(PKEY_Device_FriendlyName)
+        val = self.__property(PKEY_Device_FriendlyName)
+        if not isinstance(val, str):
+            val = val.decode('utf8')
+
+        return val
 
     @property
     def description(self):
@@ -379,14 +380,15 @@ class AudioEndpoint(object):
             conn_to = conn_from.connected_to
         except comtypes.COMError:
             raise AttributeError
-        part = conn_to.part
 
         try:
+            part = conn_to.part
+
             jack_description = part.activate(
                 IID_IKsJackDescription,
                 PIKsJackDescription
             )
-        except comtypes.COMError:
+        except (comtypes.COMError, ValueError):
             raise AttributeError
 
         try:
@@ -397,13 +399,20 @@ class AudioEndpoint(object):
         except comtypes.COMError:
             jack_description2 = None
 
-        for i in range(jack_description.GetJackCount()):
-            jd = jack_description.GetJackDescription(i)
-            if jack_description2 is None:
-                jd2 = None
-            else:
-                jd2 = jack_description2.GetJackDescription2(i)
-            yield AudioJackDescription(jd, jd2)
+        try:
+            for i in range(jack_description.GetJackCount()):
+                jd = jack_description.GetJackDescription(i)
+                if jack_description2 is None:
+                    jd2 = None
+                else:
+                    try:
+                        jd2 = jack_description2.GetJackDescription2(i)
+                    except ValueError:
+                        jd2 = None
+
+                yield AudioJackDescription(jd, jd2)
+        except ValueError:
+            raise AttributeError
 
     @property
     def jack_information(self):
@@ -413,16 +422,16 @@ class AudioEndpoint(object):
         except comtypes.COMError:
             raise AttributeError
 
-        part = conn_to.part
-
         try:
+            part = conn_to.part
+
             return AudioJackSinkInformation(
                 part.activate(
                     IID_IKsJackSinkInformation,
                     PIKsJackSinkInformation
                 )
             )
-        except comtypes.COMError:
+        except (comtypes.COMError, ValueError):
             raise AttributeError
 
     @property

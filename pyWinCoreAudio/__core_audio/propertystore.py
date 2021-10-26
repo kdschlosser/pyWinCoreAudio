@@ -1,44 +1,15 @@
+
+from .data_types import *
 import ctypes
 
-from ctypes.wintypes import (
-    LARGE_INTEGER,
-    VARIANT_BOOL,
-    FILETIME,
-    ULARGE_INTEGER,
-    ULONG,
-    SHORT,
-    USHORT,
-    INT,
-    FLOAT,
-    DOUBLE,
-    UINT
-)
-from comtypes.automation import (
-    SCODE,
-    IDispatch,
-    VARIANT
-)
-from comtypes import (
-    COMMETHOD,
-    IUnknown,
-    GUID,
-    BSTR
-)
+from comtypes.automation import IDispatch
+from comtypes import IUnknown
 from comtypes.typeinfo import (
     tagSAFEARRAYBOUND,
     tagTYPEDESC,
     tagARRAYDESC,
     IRecordInfo
 )
-
-STRING = ctypes.c_char_p
-WSTRING = ctypes.c_wchar_p
-LONGLONG = ctypes.c_longlong
-UBYTE = ctypes.c_ubyte
-ULONGLONG = ctypes.c_ulonglong
-CHAR = ctypes.c_char
-HRESULT = ctypes.HRESULT
-POINTER = ctypes.POINTER
 
 
 class tagCAUH(ctypes.Structure):
@@ -104,19 +75,19 @@ class tagBLOB(ctypes.Structure):
 
 
 class ISequentialStream(IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = GUID('{0C733A30-2A1C-11CE-ADE5-00AA0044773D}')
     _idlflags_ = []
 
 
 class IStream(ISequentialStream):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = GUID('{0000000C-0000-0000-C000-000000000046}')
     _idlflags_ = []
 
 
 class IStorage(IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = GUID('{0000000B-0000-0000-C000-000000000046}')
     _idlflags_ = []
 
@@ -460,7 +431,7 @@ class _FLAGGED_WORD_BLOB(ctypes.Structure):
 
 
 class _IPropertyStore(IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     u'Simple Property Store Interface'
     _iid_ = GUID('{886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99}')
     _idlflags_ = []
@@ -730,7 +701,7 @@ _wireBRECORD._fields_ = [
 
 
 class IEnumSTATSTG(IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = GUID('{0000000D-0000-0000-C000-000000000046}')
     _idlflags_ = []
 

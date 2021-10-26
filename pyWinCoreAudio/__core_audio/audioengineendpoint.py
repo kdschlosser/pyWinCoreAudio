@@ -16,28 +16,23 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from data_types import *
 import ctypes
 import comtypes
-from mmdeviceapi import IMMDevice
-from audioclient import PWAVEFORMATEX, WAVEFORMATEX
-from audioapotypes import (
+from .mmdeviceapi import IMMDevice
+from .audioclient import PWAVEFORMATEX, WAVEFORMATEX
+from .audioapotypes import (
     APO_CONNECTION_PROPERTY,
     PAPO_CONNECTION_PROPERTY
 )
-from enum import (
+from .enum_constants import (
     AE_POSITION_FLAGS,
     EndpointConnectorType,
     AUDIO_CURVE_TYPE
 )
-from ctypes.wintypes import (
-    FLOAT,
-    UINT,
-    DWORD,
-    BOOL,
-    HANDLE,
-    LPWSTR
-)
-from _iid import (
+
+
+from .iid import (
     IID_IAudioEndpointLastBufferControl,
     IID_IHardwareAudioEngineBase,
     IID_IAudioLfxControl,
@@ -51,17 +46,6 @@ from _iid import (
     IID_IAudioInputEndpointRT,
     IID_IAudioOutputEndpointRT
 )
-
-COMMETHOD = comtypes.COMMETHOD
-HNSTIME = ctypes.c_longlong
-VOID = ctypes.c_void_p
-UINT32 = ctypes.c_uint32
-UINT64 = ctypes.c_uint64
-FLOAT32 = FLOAT
-HRESULT = ctypes.HRESULT
-POINTER = ctypes.POINTER
-LPBOOL = POINTER(BOOL)
-UINT_PTR = POINTER(UINT)
 
 
 class AUDIO_ENDPOINT_SHARED_CREATE_PARAMS(ctypes.Structure):
@@ -93,7 +77,7 @@ PAE_CURRENT_POSITION = POINTER(AE_CURRENT_POSITION)
 
 
 class IAudioEndpoint(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioEndpoint
     _methods_ = (
         COMMETHOD(
@@ -133,7 +117,7 @@ PIAudioEndpoint = POINTER(IAudioEndpoint)
 
 
 class IAudioEndpointLastBufferControl(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioEndpointLastBufferControl
     _methods_ = (
         COMMETHOD(
@@ -156,7 +140,7 @@ PIAudioEndpointLastBufferControl = POINTER(
 
 
 class IAudioLfxControl(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioLfxControl
     _methods_ = (
         COMMETHOD(
@@ -178,7 +162,7 @@ PIAudioLfxControl = POINTER(IAudioLfxControl)
 
 
 class IHardwareAudioEngineBase(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IHardwareAudioEngineBase
     _methods_ = (
         COMMETHOD(
@@ -225,7 +209,7 @@ PIHardwareAudioEngineBase = POINTER(IHardwareAudioEngineBase)
 
 
 class IAudioEndpointOffloadStreamVolume(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioEndpointOffloadStreamVolume
     _methods_ = (
         COMMETHOD(
@@ -257,7 +241,7 @@ PIAudioEndpointOffloadStreamVolume = POINTER(IAudioEndpointOffloadStreamVolume)
 
 
 class IAudioEndpointOffloadStreamMute(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioEndpointOffloadStreamMute
     _methods_ = (
         COMMETHOD(
@@ -279,7 +263,7 @@ PIAudioEndpointOffloadStreamMute = POINTER(IAudioEndpointOffloadStreamMute)
 
 
 class IAudioEndpointOffloadStreamMeter(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioEndpointOffloadStreamMeter
     _methods_ = (
         COMMETHOD(
@@ -302,7 +286,7 @@ PIAudioEndpointOffloadStreamMeter = POINTER(IAudioEndpointOffloadStreamMeter)
 
 
 class IAudioDeviceEndpoint(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioDeviceEndpoint
     _methods_ = (
         COMMETHOD(
@@ -342,7 +326,7 @@ PIAudioDeviceEndpoint = POINTER(IAudioDeviceEndpoint)
 
 
 class IAudioEndpointRT(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioEndpointRT
     _methods_ = (
         COMMETHOD(
@@ -374,7 +358,7 @@ PIAudioEndpointRT = POINTER(IAudioEndpointRT)
 
 
 class IAudioInputEndpointRT(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioInputEndpointRT
     _methods_ = (
         COMMETHOD(
@@ -407,7 +391,7 @@ PIAudioInputEndpointRT = POINTER(IAudioInputEndpointRT)
 
 
 class IAudioOutputEndpointRT(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioOutputEndpointRT
     _methods_ = (
         COMMETHOD(
@@ -435,7 +419,7 @@ PIAudioOutputEndpointRT = POINTER(IAudioOutputEndpointRT)
 
 
 class IAudioEndpointControl(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioEndpointControl
     _methods_ = (
         COMMETHOD(

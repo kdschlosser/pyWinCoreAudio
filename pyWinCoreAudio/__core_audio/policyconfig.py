@@ -16,38 +16,22 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-
+from .data_types import *
 import ctypes
 import comtypes
-from enum import ERole
-from audioclient import PWAVEFORMATEX
-from propertystore import (
+from .enum_constants import ERole
+from .audioclient import PWAVEFORMATEX
+from .propertystore import (
     PPROPERTYKEY,
     PPROPVARIANT
 )
-from iid import (
+from .iid import (
     IID_IPolicyConfig,
     CLSID_PolicyConfigClient,
     IID_IPolicyConfigVista,
     CLSID_PolicyConfigVistaClient,
     IID_AudioSes
 )
-
-from ctypes.wintypes import (
-    INT,
-    BOOL,
-    LPCWSTR
-)
-
-COMMETHOD = comtypes.COMMETHOD
-POINTER = ctypes.POINTER
-GUID = comtypes.GUID
-REFERENCE_TIME = ctypes.c_longlong
-HRESULT = ctypes.HRESULT
-
-
-LPCGUID = POINTER(GUID)
-LPREFERENCE_TIME = POINTER(REFERENCE_TIME)
 
 
 class DeviceSharedMode(ctypes.Structure):
@@ -60,7 +44,7 @@ PDeviceSharedMode = POINTER(DeviceSharedMode)
 
 
 class IPolicyConfig(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IPolicyConfig
     _methods_ = (
         COMMETHOD(
@@ -92,7 +76,6 @@ class IPolicyConfig(comtypes.IUnknown):
             (['in'], PWAVEFORMATEX, 'pEndpointFormat'),
             (['in'], PWAVEFORMATEX, 'pMixFormat')
         ),
-
         COMMETHOD(
             [],
             HRESULT,
@@ -160,7 +143,7 @@ PIPolicyConfig = POINTER(IPolicyConfig)
 
 
 class IPolicyConfigVista(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IPolicyConfigVista
     _methods_ = (
         COMMETHOD(

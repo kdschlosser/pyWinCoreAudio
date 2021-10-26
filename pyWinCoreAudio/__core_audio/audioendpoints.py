@@ -16,20 +16,13 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-import ctypes
+from .data_types import *
 import comtypes
-from iid import IID_IAudioEndpointFormatControl
-from ctypes.wintypes import (
-    DWORD,
-)
-
-COMMETHOD = comtypes.COMMETHOD
-HRESULT = ctypes.HRESULT
-POINTER = ctypes.POINTER
+from .iid import IID_IAudioEndpointFormatControl
 
 
 class IAudioEndpointFormatControl(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioEndpointFormatControl
     _methods_ = (
         COMMETHOD(
@@ -42,4 +35,3 @@ class IAudioEndpointFormatControl(comtypes.IUnknown):
 
 
 PIAudioEndpointFormatControl = POINTER(IAudioEndpointFormatControl)
-

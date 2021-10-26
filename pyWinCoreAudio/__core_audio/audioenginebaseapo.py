@@ -16,27 +16,20 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from .data_types import *
 import ctypes
 import comtypes
-from mmdeviceapi import PIMMDeviceCollection
-from propertystore import PIPropertyStore
-from audiomediatype import PIAudioMediaType
-from audioapotypes import PAPO_CONNECTION_PROPERTY
-from enum import (
+from .mmdeviceapi import PIMMDeviceCollection
+from .propertystore import PIPropertyStore
+from .audiomediatype import PIAudioMediaType
+from .audioapotypes import PAPO_CONNECTION_PROPERTY
+from .enum_constants import (
     APO_CONNECTION_BUFFER_TYPE,
     APO_FLAG
 )
-from ctypes.wintypes import (
-    UINT,
-    LPARAM,
-    BOOL,
-    HANDLE,
-    LPWSTR,
-    WCHAR,
-    BYTE,
-    LPCVOID
-)
-from _iid import (
+from .. import utils
+
+from .iid import (
     IID_IAudioProcessingObjectRT,
     IID_IAudioProcessingObjectVBR,
     IID_IAudioProcessingObjectConfiguration,
@@ -46,22 +39,6 @@ from _iid import (
     IID_IAudioSystemEffectsCustomFormats,
     IID
 )
-
-
-POINTER = ctypes.POINTER
-COMMETHOD = comtypes.COMMETHOD
-CLSID = comtypes.GUID
-GUID = comtypes.GUID
-HNSTIME = ctypes.c_longlong
-VOID = ctypes.c_void_p
-UINT32 = ctypes.c_uint32
-HRESULT = ctypes.HRESULT
-LPUINT = POINTER(UINT)
-LPUINT32 = POINTER(UINT32)
-UINT_PTR = POINTER(UINT)
-LPBYTE = POINTER(BYTE)
-LPHNSTIME = POINTER(HNSTIME)
-LPGUID = POINTER(comtypes.GUID)
 
 
 class APO_CONNECTION_DESCRIPTOR(ctypes.Structure):
@@ -301,6 +278,10 @@ class IAudioSystemEffectsCustomFormats(comtypes.IUnknown):
             (['out'], POINTER(LPWSTR), 'ppwstrFormatRep')
         )
     )
+
+    def GetFormatRepresentation(self, nFormat):
+        data = self._GetFormatRepresentation(nFormat)
+        return utils.convert_to_string(data)
 
 
 PIAudioSystemEffectsCustomFormats = POINTER(IAudioSystemEffectsCustomFormats)

@@ -16,19 +16,8 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-
+from .data_types import *
 import ctypes
-import comtypes
-from ctypes.wintypes import (
-    DWORD,
-    BYTE,
-    WORD,
-    SHORT,
-)
-
-POINTER = ctypes.POINTER
-GUID = comtypes.GUID
-ULONG = ctypes.c_ulong
 
 
 def MAKEFOURCC(ch0, ch1, ch2, ch3):
@@ -42,7 +31,7 @@ def MAKEFOURCC(ch0, ch1, ch2, ch3):
 
 def mmioFOURCC(ch0, ch1, ch2, ch3):
     res = MAKEFOURCC(ch0, ch1, ch2, ch3)
-    print repr(ch0), repr(ch1), repr(ch2), repr(ch3), '=', res
+    # print(repr(ch0), repr(ch1), repr(ch2), repr(ch3), '=', res)
     return res
 
 
@@ -3102,7 +3091,7 @@ MJPG_DIB = mmioFOURCC('M', 'J', 'P', 'G') # Motion JPEG DIB biCompression
 #  JPEGProcess Definitions
 JPEG_PROCESS_BASELINE = 0 # Baseline DCT
 #  AVI File format extensions
-AVIIF_CONTROLFRAME = 0x00000200L # This is a control frame
+AVIIF_CONTROLFRAME = 0x00000200 # This is a control frame
 #  JIF Marker byte pairs in JPEG Interchange Format sequence
 JIFMK_SOF0 = 0xFFC0 # SOF Huff  - Baseline DCT
 JIFMK_SOF1 = 0xFFC1 # SOF Huff  - Extended sequential DCT

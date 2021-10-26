@@ -17,14 +17,12 @@
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
 import comtypes
-from __core_audio.enum import (
+from .__core_audio.enum import (
     ConnectorType,
     ERole,
     PartType
 )
-from __core_audio.devicetopologyapi import (
-    IPart,
-)
+from .__core_audio.devicetopologyapi import IPart
 
 
 CLSCTX_INPROC_SERVER = comtypes.CLSCTX_INPROC_SERVER
@@ -33,7 +31,6 @@ E_ROLE = {
     ERole.eConsole:         'Console',
     ERole.eMultimedia:      'Multimedia',
     ERole.eCommunications:  'Communications',
-    ERole.ERole_enum_count: 'ERole_enum_count'
 }
 CONNECTOR_TYPE = {
     ConnectorType.Unknown_Connector: 'Unknown Connector',
@@ -132,7 +129,11 @@ class AudioPart(object):
 
     @property
     def name(self):
-        return self.__part.GetName()
+        val = self.__part.GetName()
+        if not isinstance(val, str):
+            val = val.decode('utf8')
+
+        return val
 
     @property
     def is_connector(self):

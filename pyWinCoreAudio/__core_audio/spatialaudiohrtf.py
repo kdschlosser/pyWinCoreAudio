@@ -16,37 +16,26 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from .data_types import *
 import ctypes
-import comtypes
-from audioclient import PWAVEFORMATEX
-from spatialaudioclient import PISpatialAudioObjectRenderStreamNotify
-from enum import (
-    AUDIO_STREAM_CATEGORY,
-    AudioObjectType
-)
-from iid import (
+from .audioclient import PWAVEFORMATEX
+from .spatialaudioclient import PISpatialAudioObjectRenderStreamNotify
+from .iid import (
     IID_ISpatialAudioObjectForHrtf,
     IID_ISpatialAudioObjectRenderStreamForHrtf
 )
-from _spatialaudioclient import (
+from .spatialaudioclient import (
     ISpatialAudioObjectRenderStreamBase,
     ISpatialAudioObjectBase
 )
-from enum import (
+from .enum_constants import (
+    AUDIO_STREAM_CATEGORY,
+    AudioObjectType,
     SpatialAudioHrtfEnvironmentType,
     SpatialAudioHrtfDirectivityType,
     SpatialAudioHrtfDistanceDecayType,
     PSpatialAudioHrtfEnvironmentType
 )
-from ctypes.wintypes import (
-    FLOAT,
-    HANDLE,
-)
-
-COMMETHOD = comtypes.COMMETHOD
-UINT32 = ctypes.c_uint32
-HRESULT = ctypes.HRESULT
-POINTER = ctypes.POINTER
 
 
 class SpatialAudioHrtfDirectivity(ctypes.Structure):
@@ -133,7 +122,7 @@ PSpatialAudioHrtfActivationParams = POINTER(SpatialAudioHrtfActivationParams)
 class ISpatialAudioObjectForHrtf(
     ISpatialAudioObjectBase
 ):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioObjectForHrtf
     _methods_ = (
         COMMETHOD(
@@ -185,7 +174,7 @@ PISpatialAudioObjectForHrtf = POINTER(
 class ISpatialAudioObjectRenderStreamForHrtf(
     ISpatialAudioObjectRenderStreamBase
 ):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISpatialAudioObjectRenderStreamForHrtf
     _methods_ = (
         COMMETHOD(

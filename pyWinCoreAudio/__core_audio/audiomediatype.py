@@ -16,22 +16,11 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from .data_types import *
 import ctypes
 import comtypes
-from iid import IID_IAudioMediaType
-from audioclient import WAVEFORMATEX
-from ctypes.wintypes import (
-    BOOL,
-    DWORD,
-    FLOAT
-)
-
-POINTER = ctypes.POINTER
-COMMETHOD = comtypes.COMMETHOD
-GUID = comtypes.GUID
-HRESULT = ctypes.HRESULT
-LPBOOL = POINTER(BOOL)
-LPDWORD = POINTER(DWORD)
+from .iid import IID_IAudioMediaType
+from .audioclient import WAVEFORMATEX
 
 
 class UNCOMPRESSEDAUDIOFORMAT(ctypes.Structure):
@@ -49,7 +38,7 @@ PUNCOMPRESSEDAUDIOFORMAT = POINTER(UNCOMPRESSEDAUDIOFORMAT)
 
 
 class IAudioMediaType(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioMediaType
 
 

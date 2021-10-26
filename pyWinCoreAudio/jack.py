@@ -15,20 +15,22 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
+import comtypes
 
-from __core_audio.constant import (
+from .__core_audio.constant import (
     JACKDESC2_PRESENCE_DETECT_CAPABILITY,
     JACKDESC2_DYNAMIC_FORMAT_CHANGE_CAPABILITY
 )
-from __core_audio.enum import (
+from .__core_audio.enum import (
     KSJACK_SINK_CONNECTIONTYPE,
     EPcxGenLocation,
     EPcxGeoLocation,
     EPcxConnectionType,
     EPxcPortConnection
 )
-from speaker import AudioSpeakers
-from utils import convert_triplet_to_rgb
+from .speaker import AudioSpeakers
+from .utils import convert_triplet_to_rgb
+
 
 SINK_CONNECTIONTYPE = {
     KSJACK_SINK_CONNECTIONTYPE.KSJACK_SINK_CONNECTIONTYPE_HDMI:        'HDMI',
@@ -90,10 +92,10 @@ EPCX_CONNECTION_TYPE = {
         'Combination of connector types'
     ),
     EPcxConnectionType.eConnType3Point5mm:             (
-        '3.5mm (1\8" Headphone) jack'
+        '3.5mm (1/8" Headphone) jack'
     ),
     EPcxConnectionType.eConnTypeEighth:                (
-        '3.5mm (1\8" Headphone) jack'
+        '3.5mm (1/8" Headphone) jack'
     ),
     EPcxConnectionType.eConnTypeMultichannelAnalogDIN: (
         'Multichannel analog DIN connector'

@@ -16,20 +16,21 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+import six
 import ctypes
 import comtypes
-from utils import run_in_thread
-from singleton import Singleton
-from __core_audio.constant import (
+from .utils import run_in_thread
+from .singleton import Singleton
+from .__core_audio.constant import (
     S_OK,
     ENDPOINT_HARDWARE_SUPPORT_VOLUME,
     ENDPOINT_HARDWARE_SUPPORT_MUTE
 )
-from __core_audio.iid import (
+from .__core_audio.iid import (
     IID_IAudioEndpointVolumeEx,
     IID_IAudioMeterInformation
 )
-from __core_audio.endpointvolumeapi import (
+from .__core_audio.endpointvolumeapi import (
     PIAudioEndpointVolumeEx,
     PIAudioMeterInformation,
     IAudioEndpointVolumeCallback
@@ -69,8 +70,8 @@ class AudioEndpointVolumeCallback(comtypes.COMObject):
         return S_OK
 
 
+@six.add_metaclass(Singleton)
 class AudioVolume(object):
-    __metaclass__ = Singleton
 
     def __init__(self, endpoint):
         self.__endpoint = endpoint
@@ -78,8 +79,12 @@ class AudioVolume(object):
             IID_IAudioEndpointVolumeEx,
             PIAudioEndpointVolumeEx
         )
-        support = self.__volume.QueryHardwareSupport()
-        if support | ENDPOINT_HARDWARE_SUPPORT_VOLUME != support:
+
+        try:
+            support = self.__volume.QueryHardwareSupport()
+            if support | ENDPOINT_HARDWARE_SUPPORT_VOLUME != support:
+                raise NotImplementedError
+        except ValueError:
             raise NotImplementedError
 
     @property
@@ -197,7 +202,7 @@ class AudioPeakMeter(object):
 
         # support = self.__peak_meter.QueryHardwareSupport()
         # if support | ENDPOINT_HARDWARE_SUPPORT_METER != support:
-            # raise NotImplementedError
+        #     raise NotImplementedError
         channels = self.__peak_meter.GetChannelsPeakValues(self.channel_count)
 
         channel_peaks = ctypes.cast(

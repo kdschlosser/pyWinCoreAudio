@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-from comtypes import GUID as IID
+from .data_types import *
+
 
 IID_IMMDevice = IID(
     '{D666063F-1587-4E43-81F1-B948E807363F}'

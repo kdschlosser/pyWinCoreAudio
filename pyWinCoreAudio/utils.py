@@ -16,12 +16,11 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from .__core_audio.data_types import *
 import threading
 import ctypes
 import comtypes
-import ctypes.util
 import os
-from ctypes import wintypes
 from io import BytesIO
 
 
@@ -48,6 +47,23 @@ RT_ANIICON = 22
 RT_HTML = 23
 
 
+def convert_to_string(data):
+    if not isinstance(data, str):
+        dta = ''
+
+        try:
+            for d in data:
+                if d == '\x00':
+                    break
+                dta += d
+        except ValueError:
+            pass
+
+        data = dta
+
+    return data
+
+
 def run_in_thread(func, *args, **kwargs):
     t = threading.Thread(target=func, args=args, kwargs=kwargs)
     t.daemon = True
@@ -65,18 +81,26 @@ def convert_triplet_to_rgb(triplet):
 
 icons = {}
 
+kernel32 = ctypes.windll.kernel32
+
+libc = ctypes.cdll.msvcrt
+libc.memcpy.argtypes = [LPVOID, LPVOID, SIZE_T]
+libc.memcpy.restype = LPCSTR
+
 
 def get_icon(icon):
     global icons
 
+    if not isinstance(icon, str):
+        icn = ''
+        for item in icon:
+            icn += item
+
+        icon = icn
+
+
     if icon in icons:
         return icons[icon]
-
-    libc = ctypes.CDLL(ctypes.util.find_library('c'))
-    libc.memcpy.argtypes = [wintypes.LPVOID, wintypes.LPVOID, ctypes.c_size_t]
-    libc.memcpy.restype = wintypes.LPCSTR
-
-    kernel32 = ctypes.windll.kernel32
 
     try:
         icon_path, icon_name = icon.replace('@', '').split(',-')
@@ -86,7 +110,6 @@ def get_icon(icon):
         icon_name = 1
 
     try:
-
         hlib = kernel32.LoadLibraryExW(
             os.path.expandvars(icon_path),
             None,

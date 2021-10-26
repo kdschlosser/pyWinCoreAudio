@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from .data_types import *
 import ctypes
 import comtypes
-from iid import (
+from .iid import (
     IID_IActivateAudioInterfaceAsyncOperation,
     IID_IActivateAudioInterfaceCompletionHandler,
     IID_IAudioCaptureClient,
@@ -33,37 +34,12 @@ from iid import (
     IID_IChannelAudioVolume,
     IID_ISimpleAudioVolume,
 )
-from enum import (
+from .enum_constants import (
     AUDIO_STREAM_CATEGORY,
     AUDCLNT_STREAMOPTIONS
 )
 
-from ctypes.wintypes import (
-    FLOAT,
-    DWORD,
-    BOOL,
-    WORD,
-    HANDLE,
-    BYTE
-)
 
-
-COMMETHOD = comtypes.COMMETHOD
-UINT32 = ctypes.c_uint32
-UINT64 = ctypes.c_uint64
-LONGLONG = ctypes.c_longlong
-REFERENCE_TIME = ctypes.c_longlong
-HRESULT = ctypes.HRESULT
-POINTER = ctypes.POINTER
-LPCGUID = POINTER(comtypes.GUID)
-LPFLOAT = POINTER(FLOAT)
-LPDWORD = POINTER(DWORD)
-LPBOOL = POINTER(BOOL)
-LPUINT32 = POINTER(UINT32)
-LPBYTE = POINTER(BYTE)
-LPUINT64 = POINTER(UINT64)
-LPREFERENCE_TIME = POINTER(REFERENCE_TIME)
-LPHRESULT = POINTER(HRESULT)
 PIUnknown = POINTER(comtypes.IUnknown)
 
 
@@ -95,7 +71,7 @@ PAudioClientProperties = POINTER(AudioClientProperties)
 
 
 class IActivateAudioInterfaceAsyncOperation(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IActivateAudioInterfaceAsyncOperation
     _methods_ = (
         COMMETHOD(
@@ -114,7 +90,7 @@ PIActivateAudioInterfaceAsyncOperation = POINTER(
 
 
 class IActivateAudioInterfaceCompletionHandler(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IActivateAudioInterfaceCompletionHandler
     _methods_ = (
         COMMETHOD(
@@ -136,7 +112,7 @@ PIActivateAudioInterfaceCompletionHandler = POINTER(
 
 
 class IAudioCaptureClient(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioCaptureClient
     _methods_ = (
         COMMETHOD(
@@ -168,7 +144,7 @@ PIAudioCaptureClient = POINTER(IAudioCaptureClient)
 
 
 class IAudioClient(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioClient
     _methods_ = (
         COMMETHOD(
@@ -245,7 +221,7 @@ PIAudioClient = POINTER(IAudioClient)
 
 
 class IAudioClient2(IAudioClient):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioClient2
     _methods_ = (
         COMMETHOD(
@@ -277,7 +253,7 @@ PIAudioClient2 = POINTER(IAudioClient2)
 
 
 class IAudioClient3(IAudioClient):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioClient3
     _methods_ = (
         COMMETHOD(
@@ -313,7 +289,7 @@ PIAudioClient3 = POINTER(IAudioClient3)
 
 
 class IAudioClock(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioClock
     _methods_ = (
         COMMETHOD(
@@ -342,7 +318,7 @@ PIAudioClock = POINTER(IAudioClock)
 
 
 class IAudioClock2(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioClock2
     _methods_ = (
         COMMETHOD(
@@ -374,7 +350,7 @@ PIAudioClockAdjustment = POINTER(IAudioClockAdjustment)
 
 
 class IAudioRenderClient(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioRenderClient
     _methods_ = (
         COMMETHOD(
@@ -398,7 +374,7 @@ PIAudioRenderClient = POINTER(IAudioRenderClient)
 
 
 class ISimpleAudioVolume(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_ISimpleAudioVolume
     _methods_ = (
         COMMETHOD(
@@ -429,12 +405,30 @@ class ISimpleAudioVolume(comtypes.IUnknown):
         )
     )
 
+    @property
+    def master(self):
+        vol = self.GetMasterVolume()
+        return vol
+
+    @master.setter
+    def master(self, value):
+        self.SetMasterVolume(FLOAT(value))
+
+    @property
+    def mute(self):
+        mute = self.GetMute()
+        return mute
+
+    @mute.setter
+    def mute(self, value):
+        self.SetMute(BOOL(value))
+
 
 PISimpleAudioVolume = POINTER(ISimpleAudioVolume)
 
 
 class IAudioStreamVolume(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IAudioStreamVolume
     _methods_ = (
         COMMETHOD(
@@ -478,7 +472,7 @@ PIAudioStreamVolume = POINTER(IAudioStreamVolume)
 
 
 class IChannelAudioVolume(comtypes.IUnknown):
-    _case_insensitive_ = True
+    _case_insensitive_ = False
     _iid_ = IID_IChannelAudioVolume
     _methods_ = (
         COMMETHOD(

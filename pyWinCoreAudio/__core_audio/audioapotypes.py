@@ -16,13 +16,9 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+from .data_types import *
 import ctypes
-from enum import APO_BUFFER_FLAGS
-from ctypes.wintypes import (UINT)
-
-POINTER = ctypes.POINTER
-UINT32 = ctypes.c_uint32
-UINT_PTR = POINTER(UINT)
+from .enum_constants import APO_BUFFER_FLAGS
 
 
 class APO_CONNECTION_PROPERTY(ctypes.Structure):

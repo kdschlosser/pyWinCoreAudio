@@ -16,312 +16,82 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-from __core_audio.enum import EChannelMapping
-from __core_audio.constant import (
-    KSAUDIO_SPEAKER_DIRECTOUT,
-    KSAUDIO_SPEAKER_MONO,
-    KSAUDIO_SPEAKER_1POINT1,
-    KSAUDIO_SPEAKER_STEREO,
-    KSAUDIO_SPEAKER_2POINT1,
-    KSAUDIO_SPEAKER_3POINT0,
-    KSAUDIO_SPEAKER_3POINT1,
-    KSAUDIO_SPEAKER_QUAD,
-    KSAUDIO_SPEAKER_SURROUND,
-    KSAUDIO_SPEAKER_5POINT0,
-    KSAUDIO_SPEAKER_5POINT1,
-    KSAUDIO_SPEAKER_7POINT0,
-    KSAUDIO_SPEAKER_7POINT1,
-    KSAUDIO_SPEAKER_5POINT1_SURROUND,
-    KSAUDIO_SPEAKER_7POINT1_SURROUND,
+from .__core_audio.constant import (
+    SPEAKER_FRONT_LEFT,
+    SPEAKER_FRONT_RIGHT,
+    SPEAKER_FRONT_CENTER,
+    SPEAKER_LOW_FREQUENCY,
+    SPEAKER_BACK_LEFT,
+    SPEAKER_BACK_RIGHT,
+    SPEAKER_FRONT_LEFT_OF_CENTER,
+    SPEAKER_FRONT_RIGHT_OF_CENTER,
+    SPEAKER_BACK_CENTER,
+    SPEAKER_SIDE_LEFT,
+    SPEAKER_SIDE_RIGHT,
+    SPEAKER_TOP_CENTER,
+    SPEAKER_TOP_FRONT_LEFT,
+    SPEAKER_TOP_FRONT_CENTER,
+    SPEAKER_TOP_FRONT_RIGHT,
+    SPEAKER_TOP_BACK_LEFT,
+    SPEAKER_TOP_BACK_CENTER,
+    SPEAKER_TOP_BACK_RIGHT
 )
-
-KSAUDIO_SPEAKER = {
-    KSAUDIO_SPEAKER_DIRECTOUT: dict(
-        front_left=False,
-        front_right=False,
-        center=False,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=False,
-        string='Direct'
-    ),
-    KSAUDIO_SPEAKER_MONO: dict(
-        front_left=False,
-        front_right=False,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=False,
-        string='Mono'
-    ),
-    KSAUDIO_SPEAKER_1POINT1: dict(
-        front_left=False,
-        front_right=False,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=True,
-        string='Mono with subwoofer'
-    ),
-    KSAUDIO_SPEAKER_STEREO: dict(
-        front_left=True,
-        front_right=True,
-        center=False,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=False,
-        string='Stereo'
-    ),
-    KSAUDIO_SPEAKER_2POINT1: dict(
-        front_left=True,
-        front_right=True,
-        center=False,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=True,
-        string='Stereo with subwoofer'
-    ),
-    KSAUDIO_SPEAKER_3POINT0: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=False,
-        string='3.0'
-    ),
-    KSAUDIO_SPEAKER_3POINT1: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=True,
-        string='3.1'
-    ),
-    KSAUDIO_SPEAKER_QUAD: dict(
-        front_left=True,
-        front_right=True,
-        center=False,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=True,
-        back_right=True,
-        back_center=False,
-        subwoofer=False,
-        string='Quad'
-    ),
-    KSAUDIO_SPEAKER_SURROUND: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=True,
-        subwoofer=False,
-        string='Surround'
-    ),
-    KSAUDIO_SPEAKER_5POINT0: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=True,
-        side_right=True,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=False,
-        string='5.0'
-    ),
-    KSAUDIO_SPEAKER_5POINT1: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=True,
-        back_right=True,
-        back_center=False,
-        subwoofer=True,
-        string='5.1'
-    ),
-    KSAUDIO_SPEAKER_7POINT0: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=True,
-        side_right=True,
-        back_left=True,
-        back_right=True,
-        back_center=False,
-        subwoofer=False,
-        string='7.0'
-    ),
-    KSAUDIO_SPEAKER_7POINT1: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=True,
-        high_right=True,
-        side_left=False,
-        side_right=False,
-        back_left=True,
-        back_right=True,
-        back_center=False,
-        subwoofer=True,
-        string='7.1'
-    ),
-    KSAUDIO_SPEAKER_5POINT1_SURROUND: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=True,
-        side_right=True,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=True,
-        string='5.1 Surround'
-    ),
-    KSAUDIO_SPEAKER_7POINT1_SURROUND: dict(
-        front_left=True,
-        front_right=True,
-        center=True,
-        high_left=False,
-        high_right=False,
-        side_left=True,
-        side_right=True,
-        back_left=True,
-        back_right=True,
-        back_center=False,
-        subwoofer=True,
-        string='7.1 Surround'
-    )
-}
-
-CHANNEL_MAPPING = {
-    EChannelMapping.ePcxChanMap_FL_FR: (
-        KSAUDIO_SPEAKER[KSAUDIO_SPEAKER_STEREO]
-    ),
-    EChannelMapping.ePcxChanMap_FC_LFE: (
-        KSAUDIO_SPEAKER[KSAUDIO_SPEAKER_1POINT1]
-    ),
-    EChannelMapping.ePcxChanMap_FLC_FRC: (
-        KSAUDIO_SPEAKER[KSAUDIO_SPEAKER_3POINT0]
-    ),
-    EChannelMapping.ePcxChanMap_BL_BR: dict(
-        front_left=False,
-        front_right=False,
-        center=False,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=True,
-        back_right=True,
-        back_center=False,
-        subwoofer=False,
-        string='Back left & right'
-    ),
-
-    EChannelMapping.ePcxChanMap_SL_SR: dict(
-        front_left=False,
-        front_right=False,
-        center=False,
-        high_left=False,
-        high_right=False,
-        side_left=True,
-        side_right=True,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=False,
-        string='Side left & right'
-    ),
-    EChannelMapping.ePcxChanMap_Unknown: dict(
-        front_left=False,
-        front_right=False,
-        center=False,
-        high_left=False,
-        high_right=False,
-        side_left=False,
-        side_right=False,
-        back_left=False,
-        back_right=False,
-        back_center=False,
-        subwoofer=False,
-        string='Unknown'
-    ),
-}
 
 
 class AudioSpeakers(object):
 
     def __init__(self, value):
-        self.value = value
+        if value is None:
+            value = 0
+
+        self.front_left = value | SPEAKER_FRONT_LEFT == value
+        self.front_left_of_center = value | SPEAKER_FRONT_LEFT_OF_CENTER == value
+        self.front_center = value | SPEAKER_FRONT_CENTER == value
+        self.front_right_of_center = value | SPEAKER_FRONT_RIGHT_OF_CENTER == value
+        self.front_right = value | SPEAKER_FRONT_RIGHT == value
+        self.side_left = value | SPEAKER_SIDE_LEFT == value
+        self.side_right = value | SPEAKER_SIDE_RIGHT == value
+        self.back_left = value | SPEAKER_BACK_LEFT == value
+        self.back_center = value | SPEAKER_BACK_CENTER == value
+        self.back_right = value | SPEAKER_BACK_RIGHT == value
+        self.high_center = value | SPEAKER_TOP_CENTER == value
+        self.high_front_left = value | SPEAKER_TOP_FRONT_LEFT == value
+        self.high_front_center = value | SPEAKER_TOP_FRONT_CENTER == value
+        self.high_front_right = value | SPEAKER_TOP_FRONT_RIGHT == value
+        self.high_back_left = value | SPEAKER_TOP_BACK_LEFT == value
+        self.high_back_center = value | SPEAKER_TOP_BACK_CENTER == value
+        self.high_back_right = value | SPEAKER_TOP_BACK_RIGHT == value
+        self.subwoofer = value | SPEAKER_LOW_FREQUENCY == value
 
     def __str__(self):
-        if self.value is None:
-            return 'None'
-        return KSAUDIO_SPEAKER[self.value]['string']
+        eye_level = sum([
+            self.front_left,
+            self.front_left_of_center,
+            self.front_center,
+            self.front_right_of_center,
+            self.front_right,
+            self.side_left,
+            self.side_right,
+            self.back_left,
+            self.back_center,
+            self.back_right
+        ])
 
-    def __getattr__(self, item):
-        if item in self.__dict__:
-            return self.__dict__[item]
+        three_d = sum([
+            self.high_center,
+            self.high_front_left,
+            self.high_front_center,
+            self.high_front_right,
+            self.high_back_left,
+            self.high_back_center,
+            self.high_back_right
+        ])
 
-        if self.value is None:
-            raise AttributeError
-
-        if item in KSAUDIO_SPEAKER[self.value]:
-            return KSAUDIO_SPEAKER[self.value][item]
-
-        raise AttributeError
+        sw = int(self.subwoofer)
+        if three_d:
+            return '{0}.{1}.{2}'.format(eye_level, sw, three_d)
+        if eye_level:
+            return '{0}.{1}'.format(eye_level, sw)
+        if sw:
+            return '{0}.{1}'.format(eye_level, sw)
+        return '0'

@@ -16,10 +16,13 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-from ctypes import POINTER, c_int as enum
+try:
+    from .data_types import *
+except ImportError:
+    from data_types import *
 
 
-class AUDCLNT_SHAREMODE(enum):
+class AUDCLNT_SHAREMODE(ENUM):
     AUDCLNT_SHAREMODE_SHARED = 1
     AUDCLNT_SHAREMODE_EXCLUSIVE = 2
 
@@ -27,7 +30,7 @@ class AUDCLNT_SHAREMODE(enum):
 PAUDCLNT_SHAREMODE = POINTER(AUDCLNT_SHAREMODE)
 
 
-class AUDIO_STREAM_CATEGORY(enum):
+class AUDIO_STREAM_CATEGORY(ENUM):
     AudioCategory_Other = 0
     AudioCategory_ForegroundOnlyMedia = 1
     AudioCategory_BackgroundCapableMedia = 2
@@ -45,14 +48,14 @@ class AUDIO_STREAM_CATEGORY(enum):
 PAUDIO_STREAM_CATEGORY = POINTER(AUDIO_STREAM_CATEGORY)
 
 
-class STGM(enum):
+class STGM(ENUM):
     STGM_READ = 0x00000000
 
 
 PSTGM = POINTER(STGM)
 
 
-class AUDCLNT_BUFFERFLAGS(enum):
+class AUDCLNT_BUFFERFLAGS(ENUM):
     AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY = 0x1
     AUDCLNT_BUFFERFLAGS_SILENT = 0x2
     AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR = 0x4
@@ -61,7 +64,7 @@ class AUDCLNT_BUFFERFLAGS(enum):
 PAUDCLNT_BUFFERFLAGS = POINTER(AUDCLNT_BUFFERFLAGS)
 
 
-class AUDCLNT_STREAMOPTIONS(enum):
+class AUDCLNT_STREAMOPTIONS(ENUM):
     AUDCLNT_STREAMOPTIONS_NONE = 0
     AUDCLNT_STREAMOPTIONS_RAW = 0x1
     AUDCLNT_STREAMOPTIONS_MATCH_FORMAT = 0x2
@@ -70,24 +73,22 @@ class AUDCLNT_STREAMOPTIONS(enum):
 PAUDCLNT_STREAMOPTIONS = POINTER(AUDCLNT_STREAMOPTIONS)
 
 
-class ERole(enum):
+class ERole(ENUM):
     eConsole = 0
     eMultimedia = 1
     eCommunications = 2
-    ERole_enum_count = 3
 
 
-class EDataFlow(enum):
-    eRender = 0
-    eCapture = 1
+class EDataFlow(ENUM):
+    eRender = ENUM_VALUE(0, 'Render')
+    eCapture = ENUM_VALUE(1, 'Capture')
     eAll = 2
-    EDataFlow_enum_count = 3
 
 
 PEDataFlow = POINTER(EDataFlow)
 
 
-class DataFlow(enum):
+class DataFlow(ENUM):
     In = 0
     Out = 1
 
@@ -95,7 +96,7 @@ class DataFlow(enum):
 PDataFlow = POINTER(DataFlow)
 
 
-class PartType(enum):
+class PartType(ENUM):
     Connector = 0
     Subunit = 1
 
@@ -103,11 +104,11 @@ class PartType(enum):
 PPartType = POINTER(PartType)
 
 
-class ConnectorType(enum):
-    Unknown_Connector = 0,
+class ConnectorType(ENUM):
+    Unknown_Connector = ENUM_VALUE(0, 'Unknown')
     Physical_Internal = 1
     Physical_External = 2
-    Software_IO = 3
+    Software_IO = ENUM_VALUE(3, 'Software IO')
     Software_Fixed = 4
     Network = 5
 
@@ -115,7 +116,7 @@ class ConnectorType(enum):
 PConnectorType = POINTER(ConnectorType)
 
 
-class EndpointFormFactor(enum):
+class EndpointFormFactor(ENUM):
     RemoteNetworkDevice = 0
     Speakers = 1
     LineLevel = 2
@@ -124,16 +125,15 @@ class EndpointFormFactor(enum):
     Headset = 5
     Handset = 6
     UnknownDigitalPassthrough = 7
-    SPDIF = 8
+    SPDIF = ENUM_VALUE(8, 'SPDIF')
     DigitalAudioDisplayDevice = 9
-    UnknownFormFactor = 10
-    EndpointFormFactor_enum_count = 11
+    UnknownFormFactor = ENUM_VALUE(10, 'Unknown')
 
 
 PEndpointFormFactor = POINTER(EndpointFormFactor)
 
 
-class AudioSessionState(enum):
+class AudioSessionState(ENUM):
     AudioSessionStateInactive = 0
     AudioSessionStateActive = 1
     AudioSessionStateExpired = 2
@@ -142,17 +142,17 @@ class AudioSessionState(enum):
 PAudioSessionState = POINTER(AudioSessionState)
 
 
-class EndpointConnectorType(enum):
-    eHostProcessConnector = 0,
-    eOffloadConnector = 1,
-    eLoopbackConnector = 2,
-    eKeywordDetectorConnector = 3,
-    eConnectorCount = 4
+class EndpointConnectorType(ENUM):
+    eHostProcessConnector = 0
+    eOffloadConnector = 1
+    eLoopbackConnector = 2
+    eKeywordDetectorConnector = 3
 
 
 PEndpointConnectorType = POINTER(EndpointConnectorType)
 
-class DeviceShareMode(enum):
+
+class DeviceShareMode(ENUM):
     DeviceShared = 0
     DeviceExclusive = 1
 
@@ -160,8 +160,8 @@ class DeviceShareMode(enum):
 PDeviceShareMode = POINTER(DeviceShareMode)
 
 
-class AudioDeviceState(enum):
-    Active = 0x1
+class AudioDeviceState(ENUM):
+    Active = ENUM_VALUE(0x1, 'Active')
     Disabled = 0x2
     NotPresent = 0x4
     Unplugged = 0x8
@@ -170,80 +170,79 @@ class AudioDeviceState(enum):
 PAudioDeviceState = POINTER(AudioDeviceState)
 
 
-class EChannelMapping(enum):
-    ePcxChanMap_FL_FR = 0,
-    ePcxChanMap_FC_LFE = 1
-    ePcxChanMap_BL_BR = 2
-    ePcxChanMap_FLC_FRC = 3
-    ePcxChanMap_SL_SR = 4
-    ePcxChanMap_Unknown = 5
+class EChannelMapping(ENUM):
+    ePcxChanMap_FL_FR = ENUM_VALUE(0, 'FL, FR')
+    ePcxChanMap_FC_LFE = ENUM_VALUE(1, 'FC, LFE')
+    ePcxChanMap_BL_BR = ENUM_VALUE(2, 'BL, BR')
+    ePcxChanMap_FLC_FRC = ENUM_VALUE(3, 'FLC, FRC')
+    ePcxChanMap_SL_SR = ENUM_VALUE(4, 'SL, SR')
+    ePcxChanMap_Unknown = ENUM_VALUE(5, 'Unknown')
 
 
 PEChannelMapping = POINTER(EChannelMapping)
 
 
-class EPcxConnectionType(enum):
-    eConnTypeUnknown = 0
-    eConnType3Point5mm = 1
-    eConnTypeEighth = 1
-    eConnTypeQuarter = 2
-    eConnTypeAtapiInternal = 3
-    eConnTypeRCA = 4
-    eConnTypeOptical = 5
-    eConnTypeOtherDigital = 6
-    eConnTypeOtherAnalog = 7
-    eConnTypeMultichannelAnalogDIN = 8
-    eConnTypeXlrProfessional = 9
-    eConnTypeRJ11Modem = 10
-    eConnTypeCombination = 11
+class EPcxConnectionType(ENUM):
+    eConnTypeUnknown = ENUM_VALUE(0, 'Unknown')
+    eConnType3Point5mm = ENUM_VALUE(1, '1/8"')
+    eConnTypeQuarter = ENUM_VALUE(2, '1/4"')
+    eConnTypeAtapiInternal = ENUM_VALUE(3, 'ATAPI Internal')
+    eConnTypeRCA = ENUM_VALUE(4, 'RCA')
+    eConnTypeOptical = ENUM_VALUE(5, 'Optical')
+    eConnTypeOtherDigital = ENUM_VALUE(6, 'Other Digital')
+    eConnTypeOtherAnalog = ENUM_VALUE(7, 'Other Analog')
+    eConnTypeMultichannelAnalogDIN = ENUM_VALUE(8, 'Multichannel Analog DIN')
+    eConnTypeXlrProfessional = ENUM_VALUE(9, 'XLR')
+    eConnTypeRJ11Modem = ENUM_VALUE(10, 'RJ11')
+    eConnTypeCombination = ENUM_VALUE(11, 'Combination')
 
 
 PEPcxConnectionType = POINTER(EPcxConnectionType)
 
 
-class EPcxGeoLocation(enum):
-    eGeoLocRear = 1
-    eGeoLocFront = 2
-    eGeoLocLeft = 3
-    eGeoLocRight = 4
-    eGeoLocTop = 5
-    eGeoLocBottom = 6
-    eGeoLocRearPanel = 7
-    eGeoLocRearOPanel = 7
-    eGeoLocRiser = 8
-    eGeoLocInsideMobileLid = 9
-    eGeoLocDrivebay = 10
-    eGeoLocHDMI = 11
-    eGeoLocOutsideMobileLid = 12
-    eGeoLocATAPI = 13
-    eGeoLocNotApplicable = 14
-    eGeoLocReserved6 = 15
+class EPcxGeoLocation(ENUM):
+    eGeoLocRear = ENUM_VALUE(1, 'Rear-mounted panel')
+    eGeoLocFront = ENUM_VALUE(2, 'Front-mounted panel')
+    eGeoLocLeft = ENUM_VALUE(3, 'Left-mounted panel')
+    eGeoLocRight = ENUM_VALUE(4, 'Right-mounted panel')
+    eGeoLocTop = ENUM_VALUE(5, 'Top-mounted panel')
+    eGeoLocBottom = ENUM_VALUE(6, 'Bottom-mounted panel')
+    eGeoLocRearPanel = ENUM_VALUE(7, 'Rear-mounted panel')
+    eGeoLocRearOPanel = ENUM_VALUE(7, 'Rear-mounted slide open or pull open panel')
+    eGeoLocRiser = ENUM_VALUE(8, 'Riser card')
+    eGeoLocInsideMobileLid = ENUM_VALUE(9, 'Inside Mobile Lid')
+    eGeoLocDrivebay = ENUM_VALUE(10, 'Drive Bay')
+    eGeoLocHDMI = ENUM_VALUE(11, 'HDMI')
+    eGeoLocOutsideMobileLid = ENUM_VALUE(12, 'Outside Mobile Lid')
+    eGeoLocATAPI = ENUM_VALUE(13, 'ATAPI')
+    eGeoLocNotApplicable = ENUM_VALUE(14, '')
+    eGeoLocReserved6 = ENUM_VALUE(15, 'Reserved')
 
 
 PEPcxGeoLocation = POINTER(EPcxGeoLocation)
 
 
-class EPcxGenLocation(enum):
-    eGenLocPrimaryBox = 0
-    eGenLocInternal = 1
-    eGenLocSeparate = 2
-    eGenLocOther = 3
+class EPcxGenLocation(ENUM):
+    eGenLocPrimaryBox = ENUM_VALUE(0, 'On primary chassis')
+    eGenLocInternal = ENUM_VALUE(1, 'Inside primary chassis')
+    eGenLocSeparate = ENUM_VALUE(2, 'On separate chassis')
+    eGenLocOther = ENUM_VALUE(3, 'Other location')
 
 
 PEPcxGenLocation = POINTER(EPcxGenLocation)
 
 
-class EPxcPortConnection(enum):
-    ePortConnJack = 0
-    ePortConnIntegratedDevice = 1
-    ePortConnBothIntegratedAndJack = 2
-    ePortConnUnknown = 3
+class EPxcPortConnection(ENUM):
+    ePortConnJack = ENUM_VALUE(0, 'Jack')
+    ePortConnIntegratedDevice = ENUM_VALUE(1, 'Slot for an integrated device')
+    ePortConnBothIntegratedAndJack = ENUM_VALUE(2, 'Jack and a slot for an integrated device')
+    ePortConnUnknown = ENUM_VALUE(3, 'Unknown')
 
 
 PEPxcPortConnection = POINTER(EPxcPortConnection)
 
 
-class DisconnectReason(enum):
+class DisconnectReason(ENUM):
     DisconnectReasonDeviceRemoval = 0
     DisconnectReasonServerShutdown = 1
     DisconnectReasonFormatChanged = 2
@@ -255,7 +254,7 @@ class DisconnectReason(enum):
 PDisconnectReason = POINTER(DisconnectReason)
 
 
-class AE_POSITION_FLAGS(enum):
+class AE_POSITION_FLAGS(ENUM):
     POSITION_INVALID = 0
     POSITION_DISCONTINUOUS = 1
     POSITION_CONTINUOUS = 2
@@ -265,7 +264,7 @@ class AE_POSITION_FLAGS(enum):
 PAE_POSITION_FLAGS = POINTER(AE_POSITION_FLAGS)
 
 
-class APO_BUFFER_FLAGS(enum):
+class APO_BUFFER_FLAGS(ENUM):
     BUFFER_INVALID = 0
     BUFFER_VALID = 1
     BUFFER_SILENT = 2
@@ -274,7 +273,7 @@ class APO_BUFFER_FLAGS(enum):
 PAPO_BUFFER_FLAGS = POINTER(APO_BUFFER_FLAGS)
 
 
-class AUDIO_CURVE_TYPE(enum):
+class AUDIO_CURVE_TYPE(ENUM):
     AUDIO_CURVE_TYPE_NONE = 0
     AUDIO_CURVE_TYPE_WINDOWS_FADE = 1
 
@@ -282,7 +281,7 @@ class AUDIO_CURVE_TYPE(enum):
 PAUDIO_CURVE_TYPE = POINTER(AUDIO_CURVE_TYPE)
 
 
-class AudioSessionDisconnectReason(enum):
+class AudioSessionDisconnectReason(ENUM):
     DisconnectReasonDeviceRemoval = 0
     DisconnectReasonServerShutdown = 1
     DisconnectReasonFormatChanged = 2
@@ -294,15 +293,15 @@ class AudioSessionDisconnectReason(enum):
 PAudioSessionDisconnectReason = POINTER(AudioSessionDisconnectReason)
 
 
-class KSJACK_SINK_CONNECTIONTYPE(enum):
-    KSJACK_SINK_CONNECTIONTYPE_HDMI = 0
+class KSJACK_SINK_CONNECTIONTYPE(ENUM):
+    KSJACK_SINK_CONNECTIONTYPE_HDMI = ENUM_VALUE(0, 'HDMI')
     KSJACK_SINK_CONNECTIONTYPE_DISPLAYPORT = 1
 
 
 PKSJACK_SINK_CONNECTIONTYPE = POINTER(KSJACK_SINK_CONNECTIONTYPE)
 
 
-class KSRESET(enum):
+class KSRESET(ENUM):
     KSRESET_BEGIN = 0
     KSRESET_END = 1
 
@@ -310,7 +309,7 @@ class KSRESET(enum):
 PKSRESET = POINTER(KSRESET)
 
 
-class KSSTATE(enum):
+class KSSTATE(ENUM):
     KSSTATE_STOP = 0
     KSSTATE_ACQUIRE = 1
     KSSTATE_PAUSE = 2
@@ -320,7 +319,7 @@ class KSSTATE(enum):
 PKSSTATE = POINTER(KSSTATE)
 
 
-class APO_CONNECTION_BUFFER_TYPE(enum):
+class APO_CONNECTION_BUFFER_TYPE(ENUM):
     APO_CONNECTION_BUFFER_TYPE_ALLOCATED = 0
     APO_CONNECTION_BUFFER_TYPE_EXTERNAL = 1
     APO_CONNECTION_BUFFER_TYPE_DEPENDANT = 2
@@ -329,12 +328,12 @@ class APO_CONNECTION_BUFFER_TYPE(enum):
 PAPO_CONNECTION_BUFFER_TYPE = POINTER(APO_CONNECTION_BUFFER_TYPE)
 
 
-class APO_FLAG(enum):
+class APO_FLAG(ENUM):
     APO_FLAG_NONE = 0x00000000
     APO_FLAG_INPLACE = 0x00000001
-    APO_FLAG_SAMPLESPERFRAME_MUST_MATCH = 0x00000002
-    APO_FLAG_FRAMESPERSECOND_MUST_MATCH = 0x00000004
-    APO_FLAG_BITSPERSAMPLE_MUST_MATCH = 0x00000008
+    APO_FLAG_SAMPLESPERFRAME_MUST_MATCH = ENUM_VALUE(0x00000002, 'Samples Per Frame Must Match')
+    APO_FLAG_FRAMESPERSECOND_MUST_MATCH = ENUM_VALUE(0x00000004, 'Frames Per Second Must Match')
+    APO_FLAG_BITSPERSAMPLE_MUST_MATCH = ENUM_VALUE(0x00000008, 'Bits Per Sample Must Match')
     APO_FLAG_MIXER = 0x00000010
     APO_FLAG_DEFAULT = (
         APO_FLAG_SAMPLESPERFRAME_MUST_MATCH |
@@ -346,7 +345,7 @@ class APO_FLAG(enum):
 PAPO_FLAG = POINTER(APO_FLAG)
 
 
-class AUDIO_FLOW_TYPE(enum):
+class AUDIO_FLOW_TYPE(ENUM):
     AUDIO_FLOW_PULL = 0
     AUDIO_FLOW_PUSH = 1
 
@@ -354,7 +353,7 @@ class AUDIO_FLOW_TYPE(enum):
 PAUDIO_FLOW_TYPE = POINTER(AUDIO_FLOW_TYPE)
 
 
-class EAudioConstriction(enum):
+class EAudioConstriction(ENUM):
     eAudioConstrictionOff = 0
     eAudioConstriction48_16 = 1
     eAudioConstriction44_16 = 2
@@ -365,7 +364,7 @@ class EAudioConstriction(enum):
 PEAudioConstriction = POINTER(EAudioConstriction)
 
 
-class SpatialAudioMetadataWriterOverflowMode(enum):
+class SpatialAudioMetadataWriterOverflowMode(ENUM):
     SpatialAudioMetadataWriterOverflow_Fail = 0
     SpatialAudioMetadataWriterOverflow_MergeWithNew = 1
     SpatialAudioMetadataWriterOverflow_MergeWithLast = 2
@@ -376,7 +375,7 @@ PSpatialAudioMetadataWriterOverflowMode = POINTER(
 )
 
 
-class SpatialAudioMetadataCopyMode(enum):
+class SpatialAudioMetadataCopyMode(ENUM):
     SpatialAudioMetadataCopy_Overwrite = 0
     SpatialAudioMetadataCopy_Append = 1
     SpatialAudioMetadataCopy_AppendMergeWithLast = 2
@@ -388,7 +387,7 @@ PSpatialAudioMetadataCopyMode = POINTER(
 )
 
 
-class AudioObjectType(enum):
+class AudioObjectType(ENUM):
     AudioObjectType_None = 0
     AudioObjectType_Dynamic = 1 << 0
     AudioObjectType_FrontLeft = 1 << 1
@@ -413,7 +412,7 @@ class AudioObjectType(enum):
 PAudioObjectType = POINTER(AudioObjectType)
 
 
-class SpatialAudioHrtfDirectivityType(enum):
+class SpatialAudioHrtfDirectivityType(ENUM):
     SpatialAudioHrtfDirectivity_OmniDirectional = 0
     SpatialAudioHrtfDirectivity_Cardioid = 1
     SpatialAudioHrtfDirectivity_Cone = 2
@@ -422,7 +421,7 @@ class SpatialAudioHrtfDirectivityType(enum):
 PSpatialAudioHrtfDirectivityType = POINTER(SpatialAudioHrtfDirectivityType)
 
 
-class SpatialAudioHrtfEnvironmentType(enum):
+class SpatialAudioHrtfEnvironmentType(ENUM):
     SpatialAudioHrtfEnvironment_Small = 0
     SpatialAudioHrtfEnvironment_Medium = 1
     SpatialAudioHrtfEnvironment_Large = 2
@@ -433,7 +432,7 @@ class SpatialAudioHrtfEnvironmentType(enum):
 PSpatialAudioHrtfEnvironmentType = POINTER(SpatialAudioHrtfEnvironmentType)
 
 
-class SpatialAudioHrtfDistanceDecayType(enum):
+class SpatialAudioHrtfDistanceDecayType(ENUM):
     SpatialAudioHrtfDistanceDecay_NaturalDecay = 0
     SpatialAudioHrtfDistanceDecay_CustomDecay = 1
 
@@ -441,12 +440,12 @@ class SpatialAudioHrtfDistanceDecayType(enum):
 PSpatialAudioHrtfDistanceDecayType = POINTER(SpatialAudioHrtfDistanceDecayType)
 
 
-class KSPROPERTY_AUDIO(enum):
+class KSPROPERTY_AUDIO(ENUM):
 
     KSPROPERTY_AUDIO_LATENCY = 1
     KSPROPERTY_AUDIO_COPY_PROTECTION = 2
     KSPROPERTY_AUDIO_CHANNEL_CONFIG = 3
-    KSPROPERTY_AUDIO_VOLUMELEVEL = 4
+    KSPROPERTY_AUDIO_VOLUMELEVEL = ENUM_VALUE(4, 'Volume Level')
     KSPROPERTY_AUDIO_POSITION = 5
     KSPROPERTY_AUDIO_DYNAMIC_RANGE = 6
     KSPROPERTY_AUDIO_QUALITY = 7
@@ -475,11 +474,11 @@ class KSPROPERTY_AUDIO(enum):
     KSPROPERTY_AUDIO_STEREO_ENHANCE = 30
     KSPROPERTY_AUDIO_MANUFACTURE_GUID = 32
     KSPROPERTY_AUDIO_PRODUCT_GUID = 32
-    KSPROPERTY_AUDIO_CPU_RESOURCES = 33
+    KSPROPERTY_AUDIO_CPU_RESOURCES = ENUM_VALUE(33, 'CPU Resources')
     KSPROPERTY_AUDIO_STEREO_SPEAKER_GEOMETRY = 34
     KSPROPERTY_AUDIO_SURROUND_ENCODE = 35
     KSPROPERTY_AUDIO_3D_INTERFACE = 36
-    KSPROPERTY_AUDIO_PEAKMETER = 37
+    KSPROPERTY_AUDIO_PEAKMETER = ENUM_VALUE(37, 'Peak Meter')
     KSPROPERTY_AUDIO_ALGORITHM_INSTANCE = 38
     KSPROPERTY_AUDIO_FILTER_STATE = 39
     KSPROPERTY_AUDIO_PREFERRED_STATUS = 40
@@ -492,15 +491,24 @@ class KSPROPERTY_AUDIO(enum):
     KSPROPERTY_AUDIO_CHORUS_MODULATION_DEPTH = 47
     KSPROPERTY_AUDIO_REVERB_TIME = 48
     KSPROPERTY_AUDIO_REVERB_DELAY_FEEDBACK = 49
-    KSPROPERTY_AUDIO_POSITIONEX = 50
+    KSPROPERTY_AUDIO_POSITIONEX = ENUM_VALUE(50, 'Position EX')
     KSPROPERTY_AUDIO_MIC_ARRAY_GEOMETRY = 51
     KSPROPERTY_AUDIO_PRESENTATION_POSITION = 52
     KSPROPERTY_AUDIO_WAVERT_CURRENT_WRITE_POSITION = 53
     KSPROPERTY_AUDIO_LINEAR_BUFFER_POSITION = 54
-    KSPROPERTY_AUDIO_PEAKMETER2 = 55
-    KSPROPERTY_AUDIO_WAVERT_CURRENT_WRITE_LASTBUFFER_POSITION = 56
-    KSPROPERTY_AUDIO_VOLUMELIMIT_ENGAGED = 57
+    KSPROPERTY_AUDIO_PEAKMETER2 = ENUM_VALUE(55, 'Peak Meter 2')
+    KSPROPERTY_AUDIO_WAVERT_CURRENT_WRITE_LASTBUFFER_POSITION = ENUM_VALUE(56, 'Wave RT Current Write Last Buffer Position')
+    KSPROPERTY_AUDIO_VOLUMELIMIT_ENGAGED = ENUM_VALUE(57, 'Volume Limit Engaged')
     KSPROPERTY_AUDIO_MIC_SENSITIVITY = 58
-    KSPROPERTY_AUDIO_MIC_SNR = 59
+    KSPROPERTY_AUDIO_MIC_SNR = ENUM_VALUE(59, 'SNR')
 
 
+if __name__ == '__main__':
+    for name, cls in list(globals().items())[:]:
+        if type(cls) == EnumMeta:
+            for key, value in cls.__dict__.items():
+                if key.startswith('_'):
+                    continue
+
+                if not isinstance(value, ENUM_VALUE):
+                    continue

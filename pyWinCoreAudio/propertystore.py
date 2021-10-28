@@ -20,6 +20,7 @@ class tagCAUH(ctypes.Structure):
 
 
 class _wireSAFEARR_DISPATCH(ctypes.Structure):
+    # noinspection PyTypeChecker
     _fields_ = [
         ('Size', ULONG),
         ('apDispatch', POINTER(POINTER(IDispatch))),
@@ -260,6 +261,7 @@ class DECIMAL(ctypes.Structure):
     ]
 
 
+# noinspection PyTypeChecker
 __MIDL___MIDL_itf_mmdeviceapi_0003_0085_0001._fields_ = [
     ('cVal', CHAR),
     ('bVal', UBYTE),
@@ -355,6 +357,7 @@ ISequentialStream._methods_ = [
 ]
 
 
+# noinspection PyTypeChecker
 IStream._methods_ = [
     COMMETHOD(
         [],
@@ -476,6 +479,7 @@ _IPropertyStore._methods_ = [
     ),
 ]
 
+# noinspection PyTypeChecker
 tagVersionedStream._fields_ = [
     ('guidVersion', GUID),
     ('pStream', POINTER(IStream)),
@@ -512,6 +516,7 @@ tagCLIPDATA._fields_ = [
 
 
 class _wireSAFEARR_UNKNOWN(ctypes.Structure):
+    # noinspection PyTypeChecker
     _fields_ = [
         ('Size', ULONG),
         ('apUnknown', POINTER(POINTER(IUnknown))),
@@ -550,6 +555,7 @@ class _wireBRECORD(ctypes.Structure):
     pass
 
 
+# noinspection PyTypeChecker
 __MIDL_IOleAutomationTypes_0004._fields_ = [
     ('llVal', LONGLONG),
     ('lVal', INT),
@@ -626,6 +632,7 @@ class _wireSAFEARR_BRECORD(ctypes.Structure):
 
 
 class _wireSAFEARR_HAVEIID(ctypes.Structure):
+    # noinspection PyTypeChecker
     _fields_ = [
         ('Size', ULONG),
         ('apUnknown', POINTER(POINTER(IUnknown))),
@@ -692,6 +699,8 @@ _wireSAFEARRAY._fields_ = [
     ('uArrayStructs', _wireSAFEARRAY_UNION),
     ('rgsabound', POINTER(tagSAFEARRAYBOUND)),
 ]
+
+# noinspection PyTypeChecker
 _wireBRECORD._fields_ = [
     ('fFlags', ULONG),
     ('clSize', ULONG),
@@ -706,6 +715,7 @@ class IEnumSTATSTG(IUnknown):
     _idlflags_ = []
 
 
+# noinspection PyTypeChecker
 IEnumSTATSTG._methods_ = [
     COMMETHOD(
         [],
@@ -745,6 +755,8 @@ tag_inner_PROPVARIANT._fields_ = [
     ),
 ]
 wireSNB = POINTER(tagRemSNB)
+
+# noinspection PyTypeChecker
 IStorage._methods_ = [
     COMMETHOD(
         [],
@@ -882,6 +894,7 @@ PPROPERTYKEY = POINTER(_tagpropertykey)
 class IPropertyStore(_IPropertyStore):
 
     def GetValue(self, key):
+        # noinspection PyUnresolvedReferences
         value = _IPropertyStore.GetValue(self, key)
 
         # Types for vt defined here:
@@ -955,4 +968,5 @@ class IPropertyStore(_IPropertyStore):
             return vc.cVal
 
 
+# noinspection PyTypeChecker
 PIPropertyStore = POINTER(IPropertyStore)

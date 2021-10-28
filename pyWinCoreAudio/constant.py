@@ -16,18 +16,10 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-from .data_types import *
-import ctypes
-from .enum_constants import APO_BUFFER_FLAGS
 
+S_OK = 0x00000000
 
-class APO_CONNECTION_PROPERTY(ctypes.Structure):
-    _fields_ = [
-        ('pBuffer', UINT_PTR),
-        ('u32ValidFrameCount', UINT32),
-        ('u32BufferFlags', APO_BUFFER_FLAGS),
-        ('u32Signature', UINT32)
-    ]
+STGM_READ = 0x00000000
+STGM_WRITE = 0x00000001
+STGM_READWRITE = 0x00000002
 
-
-PAPO_CONNECTION_PROPERTY = POINTER(APO_CONNECTION_PROPERTY)

@@ -48,39 +48,6 @@ from .ks import (
 )
 
 
-def _convert_guid(*hex_guid):
-    guid = []
-    hex_four = ''
-    hex_twelve = ''
-    for h in hex_guid:
-        h = hex(h)[2:].replace('L', '')
-
-        if len(h) not in (8, 4, 2):
-            h = '0' + h
-
-        if len(h) == 2:
-            if hex_four is not None and hex_four:
-                h = hex_four + h
-                hex_four = None
-            elif hex_four is None:
-                hex_twelve += h
-                if len(hex_twelve) == 12:
-                    h = hex_twelve
-                else:
-                    continue
-            else:
-                hex_four = h
-                continue
-        guid += [h.upper()]
-
-    guid = '{' + '-'.join(guid) + '}'
-    return guid
-
-
-def DEFINE_GUIDEX(*hex_guid):
-    return GUID(_convert_guid(*hex_guid))
-
-
 STATIC_IID_IMediaFilter = (0x56A86899, 0xAD4, 0x11CE, 0xB0, 0x3A, 0x0, 0x20, 0xAF, 0xB, 0xA7, 0x70)
 STATIC_IID_IBaseFilter = (0x56A86895, 0xAD4, 0x11CE, 0xB0, 0x3A, 0x0, 0x20, 0xAF, 0xB, 0xA7, 0x70)
 STATIC_IID_IPin = (0x56a86891, 0x0ad4, 0x11ce, 0xb0, 0x3a, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70)
@@ -988,9 +955,9 @@ class IKsControl(comtypes.IUnknown):
             'KsProperty',
             (['in'], PKSPROPERTY, 'Property'),
             (['in'], ULONG, 'PropertyLength'),
-            (['in', 'out'], LPVOID, 'PropertyData'),
+            (['in'], LPVOID, 'PropertyData'),
             (['in'], ULONG, 'DataLength'),
-            (['out'], POINTER(ULONG), 'BytesReturned')
+            (['in'], POINTER(ULONG), 'BytesReturned')
         ),
         COMMETHOD(
             [],
@@ -998,9 +965,9 @@ class IKsControl(comtypes.IUnknown):
             'KsMethod',
             (['in'], PKSMETHOD, 'Method'),
             (['in'], ULONG, 'MethodLength'),
-            (['in', 'out'], LPVOID, 'MethodData'),
+            (['in'], LPVOID, 'MethodData'),
             (['in'], ULONG, 'DataLength'),
-            (['out'], POINTER(ULONG), 'BytesReturned')
+            (['in'], POINTER(ULONG), 'BytesReturned')
         ),
         COMMETHOD(
             [],
@@ -1008,9 +975,9 @@ class IKsControl(comtypes.IUnknown):
             'KsEvent',
             (['in'], PKSEVENT, 'Event'),
             (['in'], ULONG, 'EventLength'),
-            (['in', 'out'], LPVOID, 'EventData'),
+            (['in'], LPVOID, 'EventData'),
             (['in'], ULONG, 'DataLength'),
-            (['out'], POINTER(ULONG), 'BytesReturned')
+            (['in'], POINTER(ULONG), 'BytesReturned')
         )
     )
 

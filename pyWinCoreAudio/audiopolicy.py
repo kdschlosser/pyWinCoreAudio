@@ -15,30 +15,18 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
-import ctypes
 
 from .data_types import *
-import weakref
 import comtypes
-from .. import utils
+from . import utils
+from .mmdeviceapi import IMMDevice
 from .audioclient import PISimpleAudioVolume, ISimpleAudioVolume
 from .constant import S_OK
-from .enum_constants import (
+from .audiosessiontypes import (
     AudioSessionState,
-    PAudioSessionState,
-    AudioSessionDisconnectReason
+    PAudioSessionState
 )
-from .iid import (
-    IID_IAudioSessionEvents,
-    IID_IAudioSessionControl,
-    IID_IAudioSessionControl2,
-    IID_IAudioSessionManager,
-    IID_IAudioSessionManager2,
-    IID_IAudioSessionNotification,
-    IID_IAudioVolumeDuckNotification,
-    IID_IAudioSessionEnumerator,
-)
-from ..signal import (
+from .signal import (
     ON_SESSION_VOLUME_DUCK,
     ON_SESSION_VOLUME_UNDUCK,
     ON_SESSION_CREATED,
@@ -51,7 +39,45 @@ from ..signal import (
     ON_SESSION_STATE_CHANGED
 )
 
+
 _CoTaskMemFree = ctypes.windll.ole32.CoTaskMemFree
+
+IID_IAudioSessionEvents = IID(
+    '{24918ACC-64B3-37C1-8CA9-74A66E9957A8}'
+)
+IID_IAudioSessionControl = IID(
+    '{F4B1A599-7266-4319-A8CA-E70ACB11E8CD}'
+)
+IID_IAudioSessionControl2 = IID(
+    '{BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D}'
+)
+IID_IAudioSessionManager = IID(
+    '{BFA971F1-4d5e-40bb-935e-967039bfbee4}'
+)
+IID_IAudioSessionManager2 = IID(
+    '{77aa99a0-1bd6-484f-8bc7-2c654c9a9b6f}'
+)
+IID_IAudioSessionNotification = IID(
+    '{641DD20B-4D41-49CC-ABA3-174B9477BB08}'
+)
+IID_IAudioVolumeDuckNotification = IID(
+    '{C3B284D4-6D39-4359-B3CF-B56DDB3BB39C}'
+)
+IID_IAudioSessionEnumerator = IID(
+    '{E2F5BB11-0570-40CA-ACDD-3AA01277DEE8}'
+)
+
+
+class AudioSessionDisconnectReason(ENUM):
+    DisconnectReasonDeviceRemoval = 0
+    DisconnectReasonServerShutdown = 1
+    DisconnectReasonFormatChanged = 2
+    DisconnectReasonSessionLogoff = 3
+    DisconnectReasonSessionDisconnected = 4
+    DisconnectReasonExclusiveModeOverride = 5
+
+
+PAudioSessionDisconnectReason = POINTER(AudioSessionDisconnectReason)
 
 
 class _IAudioSessionEvents(comtypes.IUnknown):
@@ -111,6 +137,7 @@ class _IAudioSessionEvents(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioSessionEvents = POINTER(_IAudioSessionEvents)
 
 
@@ -259,41 +286,51 @@ class IAudioSessionControl(comtypes.IUnknown):
     )
 
     def __init__(self):
-        self._endpoint = None
-        self._session_events = None
+        self.__endpoint = None
+        self.__session_events = None
+        self.__session_manager = None
+        self.__volume = None
         comtypes.IUnknown.__init__(self)
 
     def __call__(self, endpoint, session_manager):
-        self._endpoint = endpoint
-        self._session_manager = session_manager
-        self._session_events = IAudioSessionEvents(self)
-        self.RegisterAudioSessionNotification(self._session_events)
+        self.__endpoint = endpoint
+        self.__session_manager = session_manager
+        self.__session_events = IAudioSessionEvents(self)
+        # noinspection PyUnresolvedReferences
+        self.RegisterAudioSessionNotification(self.__session_events)
         return self
 
     def __del__(self):
-        if self._session_events is not None:
-            self.UnregisterAudioSessionNotification(self._session_events)
+        if self.__session_events is not None:
+            # noinspection PyUnresolvedReferences
+            self.UnregisterAudioSessionNotification(self.__session_events)
 
-    def QueryInterface(self, interface, iid=None):
-
-        if iid is None:
-            iid = interface._iid_
-        try:
-            self.__com_QueryInterface(ctypes.byref(iid), ctypes.byref(interface))
-            return True
-        except comtypes.COMError:
-            return False
+    @property
+    def state(self) -> ENUM_VALUE:
+        """
+        Get the session state
+        """
+        # noinspection PyUnresolvedReferences
+        state = self.GetState().value
+        return AudioSessionState.get(state)
 
     @property
     def session_manager(self):
-        return self._session_manager
+        return self.__session_manager
 
     @property
-    def endpoint(self):
-        return self._endpoint
+    def endpoint(self) -> IMMDevice:
+        """
+        Endpoint the session belongs to
+        """
+        return self.__endpoint
 
     @property
-    def icon_path(self):
+    def icon_path(self) -> str:
+        """
+        Path to the icon ised for the session
+        """
+        # noinspection PyUnresolvedReferences
         data = self.GetIconPath()
         return utils.convert_to_string(data)
 
@@ -302,21 +339,37 @@ class IAudioSessionControl(comtypes.IUnknown):
         raise NotImplementedError
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """
+        Name of the session
+        """
+        # noinspection PyUnresolvedReferences
         data = self.GetDisplayName()
-        return utils.convert_to_string(data)
+        name = utils.convert_to_string(data)
+
+        _CoTaskMemFree(data)
+
+        if name == r'@%SystemRoot%\System32\AudioSrv.Dll,-202':
+            name = 'System Sounds'
+
+        return name
 
     @name.setter
     def name(self, value):
         raise NotImplementedError
 
     @property
-    def grouping_param(self):
+    def grouping_param(self) -> GUID:
+        """
+        Not sure how this works or what it does
+        """
+        # noinspection PyUnresolvedReferences
         guid = self.GetGroupingParam()
         return guid
 
     @grouping_param.setter
-    def grouping_param(self, guid):
+    def grouping_param(self, guid: GUID):
+        # noinspection PyUnresolvedReferences
         self.SetGroupingParam(ctypes.byref(guid), NULL)
 
     @property
@@ -340,9 +393,15 @@ class IAudioSessionControl(comtypes.IUnknown):
 
     @property
     def volume(self):
-        return self._session_manager.get_volume()
+        if self.__volume is None:
+            vol = self.QueryInterface(ISimpleAudioVolume)
+            if vol:
+                self.__volume = vol(self)
+
+        return self.__volume
 
 
+# noinspection PyTypeChecker
 PIAudioSessionControl = POINTER(IAudioSessionControl)
 
 
@@ -359,6 +418,7 @@ class _IAudioSessionNotification(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioSessionNotification = POINTER(_IAudioSessionNotification)
 
 
@@ -405,19 +465,23 @@ class IAudioSessionEnumerator(comtypes.IUnknown):
     )
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetCount()
 
         for i in range(count):
+            # noinspection PyTypeChecker
             session_control = POINTER(IAudioSessionControl)()
 
+            # noinspection PyUnresolvedReferences
             self.GetSession(INT(i), ctypes.byref(session_control))
-            session_control2 = POINTER(IAudioSessionControl2)()
-            if session_control.QueryInterface(session_control2):
+            session_control2 = session_control.QueryInterface(IAudioSessionControl2)
+            if session_control2:
                 session_control = session_control2
 
             yield session_control
 
 
+# noinspection PyTypeChecker
 PIAudioSessionEnumerator = POINTER(IAudioSessionEnumerator)
 
 
@@ -457,29 +521,49 @@ class IAudioSessionControl2(IAudioSessionControl):
     )
 
     @property
-    def id(self):
+    def id(self) -> str:
+        """
+        Session id
+        """
+        # noinspection PyUnresolvedReferences
         data = self.GetSessionIdentifier()
         id_ = utils.convert_to_string(data)
         _CoTaskMemFree(data)
         return id_
 
     @property
-    def instance_id(self):
+    def instance_id(self) -> str:
+        """
+        Unique session id
+        """
+        # noinspection PyUnresolvedReferences
         data = self.GetSessionInstanceIdentifier()
         id_ = utils.convert_to_string(data)
         _CoTaskMemFree(data)
         return id_
 
     @property
-    def process_id(self):
+    def process_id(self) -> int:
+        """
+        Process id
+        """
+        # noinspection PyUnresolvedReferences
         id_ = self.GetProcessId()
         return id_
 
     @property
-    def is_system_sounds(self):
+    def is_system_sounds(self) -> bool:
+        """
+        Is this session for creatig system sound effects
+        """
+        # noinspection PyUnresolvedReferences
         return bool(self.IsSystemSoundsSession())
 
-    def enable_ducking(self, value):
+    def enable_ducking(self, value: bool):
+        """
+        Turn on/off fade in and out when transitioning between media streams
+        """
+        # noinspection PyUnresolvedReferences
         self.SetDuckingPreferences(BOOL(value))
 
     def __init__(self):
@@ -491,6 +575,7 @@ class IAudioSessionControl2(IAudioSessionControl):
 
         self._vol_duck = IAudioVolumeDuckNotification(endpoint)
 
+        # noinspection PyUnresolvedReferences
         session_manager.RegisterDuckNotification(self.GetSessionInstanceIdentifier(), self._vol_duck)
         return self
 
@@ -501,6 +586,7 @@ class IAudioSessionControl2(IAudioSessionControl):
             self.session_manager.UnregisterDuckNotification(self._vol_duck)
 
 
+# noinspection PyTypeChecker
 PIAudioSessionControl2 = POINTER(IAudioSessionControl2)
 
 
@@ -514,7 +600,7 @@ class IAudioSessionManager(comtypes.IUnknown):
             'GetAudioSessionControl',
             (['in'], LPCGUID, 'AudioSessionGuid'),
             (['in'], DWORD, 'StreamFlags'),
-            (['in'], POINTER(PIAudioSessionControl), 'SessionControl')
+            (['out'], POINTER(PIAudioSessionControl), 'SessionControl')
         ),
         COMMETHOD(
             [],
@@ -522,7 +608,7 @@ class IAudioSessionManager(comtypes.IUnknown):
             'GetSimpleAudioVolume',
             (['in'], LPCGUID, 'AudioSessionGuid'),
             (['in'], DWORD, 'CrossProcessSession'),
-            (['in'], POINTER(PISimpleAudioVolume), 'AudioVolume')
+            (['out'], POINTER(PISimpleAudioVolume), 'AudioVolume')
         )
 
     )
@@ -535,21 +621,11 @@ class IAudioSessionManager(comtypes.IUnknown):
         self.__endpoint = endpoint
         return self
 
-    def get_session_control(self, guid):
-        session_control = POINTER(IAudioSessionControl)()
-        self.GetAudioSessionControl(ctypes.byref(guid), DWORD(0), ctypes.byref(session_control))
-        return session_control(self.__endpoint, self)
-
-    def get_volume(self, guid, is_cross_process):
-        vol = POINTER(ISimpleAudioVolume)()
-        self.GetSimpleAudioVolume(ctypes.byref(guid), DWORD(is_cross_process), ctypes.byref(vol))
-
-        return vol
-
     def __iter__(self):
         pass
 
 
+# noinspection PyTypeChecker
 PIAudioSessionManager = POINTER(IAudioSessionManager)
 
 
@@ -573,6 +649,7 @@ class _IAudioVolumeDuckNotification(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioVolumeDuckNotification = POINTER(_IAudioVolumeDuckNotification)
 
 
@@ -611,7 +688,7 @@ class IAudioSessionManager2(IAudioSessionManager):
             HRESULT,
             'GetSessionEnumerator',
             (
-                ['in'],
+                ['out'],
                 POINTER(PIAudioSessionEnumerator),
                 'SessionList'
             )
@@ -655,38 +732,45 @@ class IAudioSessionManager2(IAudioSessionManager):
         self.__endpoint = endpoint
         self.__session_notification = IAudioSessionNotification(endpoint)
 
+        # noinspection PyUnresolvedReferences
         self.RegisterSessionNotification(self.__session_notification)
-        return self
 
-    def remove_session(self, id_):
-        if id_ in self.__sessions:
-            del self.__sessions[id_]
+        for _ in self:
+            pass
+
+        return self
 
     def __del__(self):
         if self.__session_notification is not None:
+            # noinspection PyUnresolvedReferences
             self.UnregisterSessionNotification(self.__session_notification)
 
         self.__sessions.clear()
 
     def __iter__(self):
-        session_enum = POINTER(IAudioSessionEnumerator)()
-        self.GetSessionEnumerator(session_enum)
+        """
+        Get sessions
+        """
+        # noinspection PyUnresolvedReferences
+        session_enum = self.GetSessionEnumerator()
 
-        session_ids = []
+        if session_enum:
+            session_ids = []
 
-        for session in session_enum:
-            id_ = session.instance_id
-            session_ids.append(id_)
+            for session in session_enum:
+                id_ = session.instance_id
+                session_ids.append(id_)
 
-            if id_ not in self.__sessions:
-                self.__sessions[id_] = session(self.__endpoint, self)
+                if id_ not in self.__sessions:
+                    self.__sessions[id_] = session(self.__endpoint, self)
 
-        for id_ in list(self.__sessions.keys())[:]:
-            if id_ not in session_ids:
-                del self.__sessions[id_]
+            for id_ in list(self.__sessions.keys())[:]:
+                if id_ not in session_ids:
+                    del self.__sessions[id_]
 
-        for session in self.__sessions.values():
-            yield session
+            for session in self.__sessions.values():
+                yield session
 
 
+# noinspection PyTypeChecker
 PIAudioSessionManager2 = POINTER(IAudioSessionManager2)

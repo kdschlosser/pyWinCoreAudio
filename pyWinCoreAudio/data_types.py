@@ -9,15 +9,6 @@ VARIANT = comtypes.automation.VARIANT
 VARTYPE = comtypes.automation.VARTYPE
 LPVARTYPE = POINTER(VARTYPE)
 
-GUID = comtypes.GUID
-LPGUID = POINTER(comtypes.GUID)
-LPCGUID = POINTER(GUID)
-
-REFIID = POINTER(GUID)
-IID = GUID
-CLSID = GUID
-REFGUID = POINTER(GUID)
-
 
 if sys.maxsize > 2**32:
     LONG_PTR = ctypes.c_int64
@@ -76,12 +67,10 @@ HANDLE = ctypes.c_void_p
 HRESULT = ctypes.c_long
 LPHRESULT = POINTER(HRESULT)
 
-
 VOID = ctypes.c_void_p
 PVOID = ctypes.c_void_p
 LPVOID = ctypes.c_void_p
 LPCVOID = ctypes.c_void_p
-
 
 BOOL = ctypes.c_int
 WINBOOL = BOOL
@@ -130,6 +119,7 @@ COLORREF = DWORD
 SIZE_T = ctypes.c_size_t
 
 ACCESS_MASK = DWORD
+
 
 class _FILETIME(ctypes.Structure):
     _fields_ = [
@@ -271,6 +261,7 @@ class ENUM_VALUE(int, metaclass=EnumValueMeta):
 #     AUDCLNT_STREAMOPTIONS_MATCH_FORMAT = Match Format = 2
 class EnumMeta(type(INT)):
 
+    # noinspection PyMethodParameters
     def __init__(cls, name, bases, dct):
         super(EnumMeta, cls).__init__(name, bases, dct)
 
@@ -367,3 +358,9 @@ class ENUM(INT, metaclass=EnumMeta):
                 return value
 
         return val
+
+
+# noinspection PyTypeChecker
+PIUnknown = POINTER(comtypes.IUnknown)
+
+from .guiddef import *  # NOQA

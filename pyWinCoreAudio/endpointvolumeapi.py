@@ -19,20 +19,27 @@
 from .data_types import *
 import ctypes
 import comtypes
-from comtypes import CLSCTX_INPROC_SERVER
-from .iid import (
-    IID_IAudioEndpointVolume,
-    IID_IAudioEndpointVolumeEx,
-    IID_IAudioMeterInformation,
-    IID_IAudioEndpointVolumeCallback
+from .constant import S_OK
+from .signal import ON_ENDPOINT_VOLUME_CHANGED
+
+
+ENDPOINT_HARDWARE_SUPPORT_VOLUME = 0x00000001
+ENDPOINT_HARDWARE_SUPPORT_MUTE = 0x00000002
+ENDPOINT_HARDWARE_SUPPORT_METER = 0x00000004
+
+
+IID_IAudioEndpointVolumeCallback = IID(
+    '{657804FA-D6AD-4496-8A60-352752AF4F89}'
 )
-from .constant import (
-    S_OK,
-    ENDPOINT_HARDWARE_SUPPORT_VOLUME,
-    ENDPOINT_HARDWARE_SUPPORT_MUTE,
-    ENDPOINT_HARDWARE_SUPPORT_METER
+IID_IAudioEndpointVolumeEx = IID(
+    '{66E11784-F695-4F28-A505-A7080081A78F}'
 )
-from ..signal import ON_ENDPOINT_VOLUME_CHANGED
+IID_IAudioMeterInformation = IID(
+    '{C02216F6-8C67-4B5B-9D00-D008E73E0064}'
+)
+IID_IAudioEndpointVolume = IID(
+    '{5CDF2C82-841E-4546-9722-0CF74078229A}'
+)
 
 
 class AUDIO_VOLUME_NOTIFICATION_DATA(ctypes.Structure):
@@ -81,6 +88,7 @@ class _IAudioEndpointVolumeCallback(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioEndpointVolumeCallback = POINTER(_IAudioEndpointVolumeCallback)
 
 
@@ -94,8 +102,8 @@ class IAudioEndpointVolumeCallback(comtypes.COMObject):
     def OnNotify(self, pNotify):
         pNotify = ctypes.cast(pNotify, PAUDIO_VOLUME_NOTIFICATION_DATA).contents
         ON_ENDPOINT_VOLUME_CHANGED.signal(
-            self.__endpoint.device,
-            self.__endpoint,
+            device=self.__endpoint.device,
+            endpoint=self.__endpoint,
             is_muted=pNotify.is_muted,
             master_volume=pNotify.master_volume,
             channel_volumes=list(pNotify)
@@ -113,10 +121,15 @@ class EndpointChannelVolume(object):
     def peak(self):
         endpoint_volume = self.__endpoint_volume
 
+        # noinspection PyProtectedMember
         if endpoint_volume._peak_meter is None:
             return -1.0
 
-        return list(endpoint_volume._peak_meter)[self.channel_number]
+        # noinspection PyProtectedMember
+        peaks = list(endpoint_volume._peak_meter)
+        if peaks:
+            return peaks[self.channel_number]
+        return -1.0
 
     @property
     def endpoint(self):
@@ -164,6 +177,7 @@ class EndpointChannelVolume(object):
             pflVolumeMaxdB = FLOAT()
             pflVolumeIncrementdB = FLOAT()
 
+            # noinspection PyUnresolvedReferences
             endpoint_volume.GetVolumeRangeChannel(
                 UINT(self.channel_number),
                 ctypes.byref(pflVolumeMindB),
@@ -183,6 +197,7 @@ class EndpointChannelVolume(object):
             pflVolumeMaxdB = FLOAT()
             pflVolumeIncrementdB = FLOAT()
 
+            # noinspection PyUnresolvedReferences
             endpoint_volume.GetVolumeRangeChannel(
                 UINT(self.channel_number),
                 ctypes.byref(pflVolumeMindB),
@@ -202,6 +217,7 @@ class EndpointChannelVolume(object):
             pflVolumeMaxdB = FLOAT()
             pflVolumeIncrementdB = FLOAT()
 
+            # noinspection PyUnresolvedReferences
             endpoint_volume.GetVolumeRangeChannel(
                 UINT(self.channel_number),
                 ctypes.byref(pflVolumeMindB),
@@ -211,10 +227,6 @@ class EndpointChannelVolume(object):
             return pflVolumeIncrementdB.value
 
         return endpoint_volume.db_increment
-
-    @property
-    def is_active(self):
-        return self.__endpoint_volume() is not None
 
 
 class IAudioEndpointVolume(comtypes.IUnknown):
@@ -346,7 +358,7 @@ class IAudioEndpointVolume(comtypes.IUnknown):
     def __init__(self):
         self.__device = None
         self.__endpoint = None
-        self._volume_callback = None
+        self.__volume_callback = None
         self._peak_meter = None
         comtypes.IUnknown.__init__(self)
 
@@ -355,19 +367,26 @@ class IAudioEndpointVolume(comtypes.IUnknown):
         self.__endpoint = endpoint
 
         if endpoint is not None:
-            self._volume_callback = IAudioEndpointVolumeCallback(endpoint)
-            self.RegisterControlChangeNotify(self._volume_callback)
+            self.__volume_callback = IAudioEndpointVolumeCallback(endpoint)
 
-            self._peak_meter = self.__endpoint.activate(IAudioMeterInformation)
+            # noinspection PyUnresolvedReferences
+            self.RegisterControlChangeNotify(self.__volume_callback)
+
+            peak_meter = self.__endpoint.activate(IAudioMeterInformation)
+            if peak_meter:
+                self._peak_meter = peak_meter
+            else:
+                self._peak_meter = None
 
         return self
 
     def __del__(self):
-        if self._volume_callback is None:
+        if self.__volume_callback is None:
             return
 
         try:
-            self.UnregisterControlChangeNotify(self._volume_callback)
+            # noinspection PyUnresolvedReferences
+            self.UnregisterControlChangeNotify(self.__volume_callback)
         except ValueError:
             pass
 
@@ -379,6 +398,7 @@ class IAudioEndpointVolume(comtypes.IUnknown):
         return self._peak_meter.peak_value
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetChannelCount()
         for i in range(count):
             yield EndpointChannelVolume(self, i)
@@ -387,6 +407,7 @@ class IAudioEndpointVolume(comtypes.IUnknown):
     def level_db(self):
         pfLevelDB = FLOAT()
         try:
+            # noinspection PyUnresolvedReferences
             self.GetMasterVolumeLevel(ctypes.byref(pfLevelDB))
         except ValueError:
             return 0.0
@@ -395,23 +416,28 @@ class IAudioEndpointVolume(comtypes.IUnknown):
 
     @level_db.setter
     def level_db(self, value):
+        # noinspection PyUnresolvedReferences
         self.SetMasterVolumeLevel(FLOAT(value), NULL)
 
     @property
     def level(self):
+        # noinspection PyUnresolvedReferences
         pfLevel = self.GetMasterVolumeLevelScalar()
         return pfLevel * 100.0
 
     @level.setter
     def level(self, value):
+        # noinspection PyUnresolvedReferences
         self.SetMasterVolumeLevelScalar(FLOAT(value / 100.0), NULL)
 
     @property
     def mute(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.GetMute())
 
     @mute.setter
     def mute(self, value):
+        # noinspection PyUnresolvedReferences
         self.SetMute(BOOL(value), NULL)
 
     @property
@@ -419,6 +445,7 @@ class IAudioEndpointVolume(comtypes.IUnknown):
         pflVolumeMindB = FLOAT()
         pflVolumeMaxdB = FLOAT()
         pflVolumeIncrementdB = FLOAT()
+        # noinspection PyUnresolvedReferences
         self.GetVolumeRange(
             ctypes.byref(pflVolumeMindB),
             ctypes.byref(pflVolumeMaxdB),
@@ -432,6 +459,7 @@ class IAudioEndpointVolume(comtypes.IUnknown):
         pflVolumeMindB = FLOAT()
         pflVolumeMaxdB = FLOAT()
         pflVolumeIncrementdB = FLOAT()
+        # noinspection PyUnresolvedReferences
         self.GetVolumeRange(
             ctypes.byref(pflVolumeMindB),
             ctypes.byref(pflVolumeMaxdB),
@@ -440,10 +468,12 @@ class IAudioEndpointVolume(comtypes.IUnknown):
 
         return pflVolumeMaxdB.value
 
+    @property
     def db_increment(self):
         pflVolumeMindB = FLOAT()
         pflVolumeMaxdB = FLOAT()
         pflVolumeIncrementdB = FLOAT()
+        # noinspection PyUnresolvedReferences
         self.GetVolumeRange(
             ctypes.byref(pflVolumeMindB),
             ctypes.byref(pflVolumeMaxdB),
@@ -453,15 +483,18 @@ class IAudioEndpointVolume(comtypes.IUnknown):
         return pflVolumeIncrementdB.value
 
     def step_up(self):
+        # noinspection PyUnresolvedReferences
         self.VolumeStepUp(NULL)
 
     def step_down(self):
+        # noinspection PyUnresolvedReferences
         self.VolumeStepDown(NULL)
 
     @property
     def current_step(self):
         pnStep = UINT()
         pnStepCount = UINT()
+        # noinspection PyUnresolvedReferences
         self.GetVolumeStepInfo(ctypes.byref(pnStep), ctypes.byref(pnStepCount))
         return pnStep
 
@@ -469,19 +502,23 @@ class IAudioEndpointVolume(comtypes.IUnknown):
     def number_of_steps(self):
         pnStep = UINT()
         pnStepCount = UINT()
+        # noinspection PyUnresolvedReferences
         self.GetVolumeStepInfo(ctypes.byref(pnStep), ctypes.byref(pnStepCount))
         return pnStepCount
 
     @property
     def has_hardware_volume_control(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.QueryHardwareSupport() & ENDPOINT_HARDWARE_SUPPORT_VOLUME)
 
     @property
     def has_hardware_mute_control(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.QueryHardwareSupport() & ENDPOINT_HARDWARE_SUPPORT_MUTE)
 
     @property
     def has_hardware_peak_meter(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.QueryHardwareSupport() & ENDPOINT_HARDWARE_SUPPORT_METER)
 
     def __float__(self):
@@ -494,7 +531,7 @@ class IAudioEndpointVolume(comtypes.IUnknown):
         return str(self.level)
 
 
-
+# noinspection PyTypeChecker
 PIAudioEndpointVolume = POINTER(IAudioEndpointVolume)
 
 
@@ -514,6 +551,7 @@ class IAudioEndpointVolumeEx(IAudioEndpointVolume):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioEndpointVolumeEx = POINTER(IAudioEndpointVolumeEx)
 
 
@@ -538,7 +576,7 @@ class IAudioMeterInformation(comtypes.IUnknown):
             HRESULT,
             'GetChannelsPeakValues',
             (['in'], UINT32, 'u32ChannelCount'),
-            (['in'], (LPFLOAT * 8), 'afPeakValues')
+            (['in'], LPVOID, 'afPeakValues')
         ),
         COMMETHOD(
             [],
@@ -550,23 +588,27 @@ class IAudioMeterInformation(comtypes.IUnknown):
 
     @property
     def is_suppported(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.QueryHardwareSupport() & ENDPOINT_HARDWARE_SUPPORT_METER)
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         u32ChannelCount = self.GetMeteringChannelCount()
-
         afPeakValues = (FLOAT * u32ChannelCount)()
-
-        self.GetChannelsPeakValues(UINT32(u32ChannelCount), afPeakValues)
+        # noinspection PyUnresolvedReferences
+        self.GetChannelsPeakValues(UINT32(u32ChannelCount), ctypes.cast(afPeakValues, LPVOID))
 
         for i in range(u32ChannelCount):
-            yield afPeakValues[i].value * 100.0
+            if afPeakValues[i]:
+                yield afPeakValues[i] * 100.0
 
     @property
     def peak_value(self):
         pfPeak = FLOAT()
+        # noinspection PyUnresolvedReferences
         self.GetPeakValue(ctypes.byref(pfPeak))
         return pfPeak.value * 100.0
 
 
+# noinspection PyTypeChecker
 PIAudioMeterInformation = POINTER(IAudioMeterInformation)

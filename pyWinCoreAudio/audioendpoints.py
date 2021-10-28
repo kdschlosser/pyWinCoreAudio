@@ -18,7 +18,11 @@
 
 from .data_types import *
 import comtypes
-from .iid import IID_IAudioEndpointFormatControl
+
+
+IID_IAudioEndpointFormatControl = IID(
+    '{784CFD40-9F89-456E-A1A6-873B006A664E}'
+)
 
 
 class IAudioEndpointFormatControl(comtypes.IUnknown):
@@ -30,8 +34,9 @@ class IAudioEndpointFormatControl(comtypes.IUnknown):
             HRESULT,
             'ResetToDefault',
             (['in'], DWORD, 'ResetFlags')
-        ),
+        )
     )
 
 
+# noinspection PyTypeChecker
 PIAudioEndpointFormatControl = POINTER(IAudioEndpointFormatControl)

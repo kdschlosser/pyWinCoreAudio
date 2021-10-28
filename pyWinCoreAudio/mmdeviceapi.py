@@ -15,28 +15,42 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
-from .data_types import *
-import ctypes
+
 import comtypes
-from comtypes import CoClass
-from .. import utils
-from .policyconfig import IPolicyConfigVista
-from .audioclient import IAudioClient
+
+from .data_types import *  # NOQA
+import ctypes  # NOQA
+import comtypes  # NOQA
+from comtypes import CoClass  # NOQA
+from . import utils  # NOQA
+from .policyconfig import IPolicyConfigVista  # NOQA
+from .audioclient import IAudioClient  # NOQA
 from .audiopolicy import (
     IAudioSessionManager,
     IAudioSessionManager2,
-)
+)  # NOQA
 from .endpointvolumeapi import (
     IAudioEndpointVolumeEx,
     IAudioEndpointVolume
-)
+)  # NOQA
+from .signal import (
+    ON_DEVICE_STATE_CHANGED,
+    ON_DEVICE_ADDED,
+    ON_DEVICE_REMOVED,
+    ON_ENDPOINT_DEFAULT_CHANGED,
+    ON_DEVICE_PROPERTY_CHANGED
+)  # NOQA
+from .ksmedia import (
+    AudioSpeakers,
+    JackDescription,
+    EPcxConnectionType,
+    KSJACK_SINK_INFORMATION
+)  # NOQA
 from .devicetopologyapi import (
     IDeviceTopology,
-    AudioSpeakers,
     IAudioInputSelector,
     IKsJackDescription,
     IKsJackDescription2,
-    JackDescription,
     IKsJackSinkInformation,
     IAudioAutoGainControl,
     IAudioBass,
@@ -46,26 +60,24 @@ from .devicetopologyapi import (
     IAudioOutputSelector,
     IAudioTreble,
     IConnector,
-    ISubunit
-)
+    ISubunit,
+    PartType,
+    ConnectorType
+)  # NOQA
 from .propertystore import (
     PROPERTYKEY,
     PIPropertyStore,
     PPROPVARIANT
-)
-from .enum_constants import (
-    ERole,
-    EDataFlow,
-    PEDataFlow,
-    EndpointFormFactor
-)
+)  # NOQA
 from .constant import (
     S_OK,
-    NodeTypeGUID,
-    PKEY_DeviceInterface_FriendlyName,
     STGM_READ,
     STGM_WRITE,
-    DEVICE_STATE_MASK_ALL,
+)  # NOQA
+from .ksmedia import KSNODETYPE  # NOQA
+from .policyconfig import CLSID_PolicyConfigVistaClient  # NOQA
+from .functiondiscoverykeys_devpkey import (
+    PKEY_DeviceInterface_FriendlyName,
     PKEY_Device_FriendlyName,
     PKEY_Device_DeviceDesc,
     PKEY_AudioEndpoint_FormFactor,
@@ -73,39 +85,92 @@ from .constant import (
     PKEY_AudioEndpoint_FullRangeSpeakers,
     PKEY_AudioEndpoint_GUID,
     PKEY_AudioEndpoint_PhysicalSpeakers,
-    PKEY_AudioEndpoint_Disable_SysFx,
-    DEVICE_STATE_UNPLUGGED,
-    DEVICE_STATE_NOTPRESENT,
-    DEVICE_STATE_DISABLED,
-    DEVICE_STATE_ACTIVE,
-)
-from .iid import (
-    IID_IDeviceTopology,
-    IID_IMMDevice,
-    IID_IMMDeviceCollection,
-    IID_IMMDeviceEnumerator,
-    IID_IMMNotificationClient,
-    IID_IMMEndpoint,
-    IID_IMMDeviceActivator,
-    CLSID_MMDeviceEnumerator,
-    CLSID_PolicyConfigVistaClient,
-    IID_MMDeviceAPILib,
-    IID_IActivateAudioInterfaceAsyncOperation,
-    IID_IActivateAudioInterfaceCompletionHandler
-)
-
-from ..signal import (
-    ON_DEVICE_STATE_CHANGED,
-    ON_DEVICE_ADDED,
-    ON_DEVICE_REMOVED,
-    ON_ENDPOINT_DEFAULT_CHANGED,
-    ON_DEVICE_PROPERTY_CHANGED
-)
+    PKEY_AudioEndpoint_Disable_SysFx
+)  # NOQA
 
 
-CLSCTX_INPROC_SERVER = comtypes.CLSCTX_INPROC_SERVER
-PIUnknown = POINTER(comtypes.IUnknown)
+IID_IMMDeviceCollection = IID(
+    '{0BD7A1BE-7A1A-44DB-8397-CC5392387B5E}'
+)
+IID_IMMDeviceEnumerator = IID(
+    '{A95664D2-9614-4F35-A746-DE8DB63617E6}'
+)
+IID_IMMDevice = IID(
+    '{D666063F-1587-4E43-81F1-B948E807363F}'
+)
+IID_IMMNotificationClient = IID(
+    '{7991EEC9-7E89-4D85-8390-6C703CEC60C0}'
+)
+IID_IMMEndpoint = IID(
+    '{1BE09788-6894-4089-8586-9A2A6C265AC5}'
+)
+IID_IMMDeviceActivator = IID(
+    '{3B0D0EA4-D0A9-4B0E-935B-09516746FAC0}'
+)
+IID_IActivateAudioInterfaceAsyncOperation = IID(
+    '{72A22D78-CDE4-431D-B8CC-843A71199B6D}'
+)
+IID_IActivateAudioInterfaceCompletionHandler = IID(
+    '{41D949AB-9862-444A-80F6-C261334DA5EB}'
+)
+IID_MMDeviceAPILib = (
+    '{2FDAAFA3-7523-4F66-9957-9D5E7FE698F6}'
+)
+CLSID_MMDeviceEnumerator = IID(
+    '{BCDE0395-E52F-467C-8E3D-C4579291692E}'
+)
+
+
+class EndpointFormFactor(ENUM):
+    RemoteNetworkDevice = 0
+    Speakers = 1
+    LineLevel = 2
+    Headphones = 3
+    Microphone = 4
+    Headset = 5
+    Handset = 6
+    UnknownDigitalPassthrough = 7
+    SPDIF = ENUM_VALUE(8, 'SPDIF')
+    DigitalAudioDisplayDevice = 9
+    UnknownFormFactor = ENUM_VALUE(10, 'Unknown')
+
+
+PEndpointFormFactor = POINTER(EndpointFormFactor)
+
+
+class ERole(ENUM):
+    eConsole = 0
+    eMultimedia = 1
+    eCommunications = 2
+
+
+class EDataFlow(ENUM):
+    eRender = ENUM_VALUE(0, 'Render')
+    eCapture = ENUM_VALUE(1, 'Capture')
+    eAll = 2
+
+
+PEDataFlow = POINTER(EDataFlow)
+
+
+class DataFlow(ENUM):
+    In = 0
+    Out = 1
+
+
+PDataFlow = POINTER(DataFlow)
+
 _CoTaskMemFree = ctypes.windll.ole32.CoTaskMemFree
+
+
+DEVICE_STATE_ACTIVE = 0x00000001
+DEVICE_STATE_DISABLED = 0x00000002
+DEVICE_STATE_NOTPRESENT = 0x00000004
+DEVICE_STATE_UNPLUGGED = 0x00000008
+DEVICE_STATE_MASK_ALL = 0x0000000F
+
+ENDPOINT_SYSFX_ENABLED = 0x00000000
+ENDPOINT_SYSFX_DISABLED = 0x00000001
 
 
 class _IMMNotificationClient(comtypes.IUnknown):
@@ -149,6 +214,7 @@ class _IMMNotificationClient(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIMMNotificationClient = POINTER(_IMMNotificationClient)
 
 
@@ -175,12 +241,12 @@ class IMMNotificationClient(comtypes.COMObject):
 
         for device in self.__device_enum:
             if device.id == pwstrDeviceId:
-                ON_DEVICE_STATE_CHANGED.signal(device, new_state=state)
+                ON_DEVICE_STATE_CHANGED.signal(device=device, new_state=state)
                 break
 
             for endpoint in device:
                 if endpoint.id == pwstrDeviceId:
-                    ON_DEVICE_STATE_CHANGED.signal(device, endpoint=endpoint, new_state=state)
+                    ON_DEVICE_STATE_CHANGED.signal(device=device, endpoint=endpoint, new_state=state)
                     break
             else:
                 continue
@@ -193,7 +259,7 @@ class IMMNotificationClient(comtypes.COMObject):
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
         for device in self.__device_enum:
             if device.id == pwstrDeviceId:
-                ON_DEVICE_ADDED.signal(device)
+                ON_DEVICE_ADDED.signal(device=device)
                 break
 
         return S_OK
@@ -251,6 +317,7 @@ class IActivateAudioInterfaceAsyncOperation(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIActivateAudioInterfaceAsyncOperation = POINTER(
     IActivateAudioInterfaceAsyncOperation
 )
@@ -273,6 +340,7 @@ class IActivateAudioInterfaceCompletionHandler(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIActivateAudioInterfaceCompletionHandler = POINTER(
     IActivateAudioInterfaceCompletionHandler
 )
@@ -291,427 +359,8 @@ class IMMEndpoint(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIMMEndpoint = POINTER(IMMEndpoint)
-
-
-class IMMDevice(comtypes.IUnknown):
-    _case_insensitive_ = False
-    _iid_ = IID_IMMDevice
-    _methods_ = (
-        COMMETHOD(
-            [],
-            HRESULT,
-            'Activate',
-            (['in'], REFIID, 'iid'),
-            (['in'], DWORD, 'dwClsCtx'),
-            (['in'], PPROPVARIANT, 'pActivationParams', None),
-            (['out'], POINTER(LPVOID), 'ppInterface')
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'OpenPropertyStore',
-            (['in'], DWORD, 'stgmAccess'),
-            (['out'], POINTER(PIPropertyStore), 'ppProperties'),
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'GetId',
-            (['out'], POINTER(LPWSTR), 'ppstrId')
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'GetState',
-            (['out'], LPDWORD, 'pdwState')
-        )
-    )
-
-    @property
-    def device_name(self):
-        return self.get_property(PKEY_DeviceInterface_FriendlyName)
-
-    def get_property(self, key):
-        pStore = self.OpenPropertyStore(STGM_READ)
-        try:
-            return pStore.GetValue(key)
-        except comtypes.COMError:
-            raise AttributeError
-
-    def set_property(self, key, value):
-        pStore = self.OpenPropertyStore(STGM_WRITE)
-        try:
-            return pStore.GetValue(key)
-        except comtypes.COMError:
-            raise AttributeError
-
-    def activate(self, cls):
-        try:
-            return ctypes.cast(
-                self.Activate(
-                    cls._iid_,
-                    CLSCTX_INPROC_SERVER,
-                    None
-                ),
-                POINTER(cls)
-            )
-
-        except comtypes.COMError:
-            pass
-
-    @property
-    def state(self):
-        return self.GetState()
-
-    @property
-    def id(self):
-        data = self.GetId()
-        id_ = utils.convert_to_string(data)
-        _CoTaskMemFree(data)
-        return id_
-
-    def QueryInterface(self, interface, iid=None):
-        if iid is None:
-            iid = interface._iid_
-
-        try:
-            self._IUnknown__com_QueryInterface(ctypes.byref(iid), ctypes.byref(interface))
-            return True
-        except comtypes.COMError:
-            return False
-
-    @property
-    def audio_client(self):
-        audio_client = POINTER(IAudioClient)(self)
-        self.activate(audio_client)
-        return audio_client
-
-    @property
-    def session_manager(self):
-        return self.__session_manager
-
-    @property
-    def data_flow(self):
-        endpoint = POINTER(IMMEndpoint)()
-        if self.QueryInterface(endpoint):
-            return EDataFlow.get(endpoint.GetDataFlow().value)
-
-    @property
-    def name(self):
-        """Return an endpoint devices FriendlyName."""
-        val = self.get_property(PKEY_Device_FriendlyName)
-        return utils.convert_to_string(val)
-
-    @property
-    def description(self):
-        val = self.get_property(PKEY_Device_DeviceDesc)
-        return utils.convert_to_string(val)
-
-    @property
-    def form_factor(self):
-        form_factor = self.get_property(PKEY_AudioEndpoint_FormFactor)
-        return EndpointFormFactor.get(form_factor)
-
-    @property
-    def type(self):
-        sub_type = self.get_property(PKEY_AudioEndpoint_JackSubType)
-        sub_type_guid = str(sub_type)
-        value = NodeTypeGUID.get(sub_type_guid)
-        if value is None:
-            return 'Unknown'
-        return value.label
-
-    @property
-    def full_range_speakers(self):
-        return AudioSpeakers(
-            self.get_property(PKEY_AudioEndpoint_FullRangeSpeakers)
-        )
-
-    @property
-    def guid(self):
-        return self.get_property(PKEY_AudioEndpoint_GUID)
-
-    @property
-    def physical_speakers(self):
-        return AudioSpeakers(
-            self.get_property(PKEY_AudioEndpoint_PhysicalSpeakers)
-        )
-
-    @property
-    def system_effects(self):
-        return bool(
-            self.get_property(PKEY_AudioEndpoint_Disable_SysFx)
-        )
-
-    @property
-    def hdcp_capable(self):
-        js = self.jack_sink_information
-        if js is None:
-            return False
-        return js.hdcp_capable
-
-    @property
-    def ai_capable(self):
-        js = self.jack_sink_information
-        if js is None:
-            return False
-
-        return js.ai_capable
-
-    @property
-    def connector_type(self):
-        connector = self.connector.connected_to
-        return connector.type
-
-    @property
-    def connector_name(self):
-        connector = self.connector.connected_to
-        part = connector.part
-
-        return part.name
-
-    @property
-    def connector_subtype(self):
-        connector = self.connector.connected_to
-        part = connector.part
-
-        return part.sub_type
-
-    @property
-    def connector_location(self):
-        jd = self.jack_descriptions
-        if not jd:
-            return 'Unknown'
-
-        jd = jd[0]
-
-        return jd.location
-
-    @property
-    def connector_style(self):
-        js = self.jack_sink_information
-        if js is not None:
-            return js.connection_type
-
-        jd = self.jack_descriptions
-        if not jd:
-            return 'Unknown'
-
-        jd = jd[0]
-
-        return jd.connection_type
-
-    @property
-    def presence_detection(self):
-        jd = self.jack_descriptions
-        if not jd:
-            return False
-
-        jd = jd[0]
-
-        return jd.presence_detection
-
-    @property
-    def connector_color(self):
-        jd = self.jack_descriptions
-        if not jd:
-            if 'green' in self.connector_name.lower():
-                return 0, 255, 0, 255
-            if 'pink' in self.connector_name.lower():
-                return 255, 128, 192, 255
-            if 'blue' in self.connector_name.lower():
-                return 0, 0, 255, 255
-
-            return 0, 0, 0, 0
-
-        jd = jd[0]
-
-        return jd.color + (255,)
-
-    @property
-    def is_connected(self):
-        jd = self.jack_descriptions
-        if not jd:
-            return False
-
-        jd = jd[0]
-
-        return jd.is_connected
-
-    @property
-    def jack_descriptions(self):
-        conn_to = self.connector.connected_to
-        if conn_to is None:
-            return []
-
-        part = conn_to.part
-        jack_description = part.activate(IKsJackDescription)
-        if not jack_description:
-            return []
-
-        jack_description2 = part.activate(IKsJackDescription2)
-        if not jack_description2:
-            jack_description2 = None
-
-        jds = list(jack_description)
-
-        if jack_description2 is None:
-            jd2s = [None] * len(jds)
-        else:
-            jd2s = list(jack_description2)
-
-        res = []
-
-        for jd1, jd2 in zip(jds, jd2s):
-            res.append(JackDescription(jd1, jd2))
-
-        return res
-
-    @property
-    def jack_sink_information(self):
-        conn_to = self.connector.connected_to
-        if conn_to is None:
-            return None
-
-        part = conn_to.part
-        sink_information = part.activate(IKsJackSinkInformation)
-
-        if sink_information:
-            return sink_information.GetJackSinkInformation()
-
-    @property
-    def auto_gain_control(self):
-        return self.__get_interface(IAudioAutoGainControl._iid_)
-
-    @property
-    def bass(self):
-        return self.__get_interface(IAudioBass._iid_)
-
-    @property
-    def channel_config(self):
-        return self.__get_interface(IAudioChannelConfig._iid_)
-
-    @property
-    def input(self):
-        return self.__get_interface(IAudioInputSelector._iid_)
-
-    @property
-    def loudness(self):
-        return self.__get_interface(IAudioLoudness._iid_)
-
-    @property
-    def midrange(self):
-        return self.__get_interface(IAudioMidrange._iid_)
-
-    @property
-    def output(self):
-        return self.__get_interface(IAudioOutputSelector._iid_)
-
-    def __get_interface(self, iid):
-        for subunit in self.subunits:
-            part = subunit.part
-            for interface in part:
-                if interface._iid_ == iid:
-                    return interface
-        #
-        # device = self.__device
-        # conn_from = device.connectors[0]
-        #
-        # while True:
-        #     try:
-        #         conn_from = conn_from.connected_to
-        #     except comtypes.COMError:
-        #         return None
-        #
-        #     part = conn_from.part
-        #     device_topology = part.device_topology
-        #     for subunit in device_topology.subunits:
-        #         part = subunit.part
-        #
-        #
-        #     if conn_from.type == ConnectorType.Software_IO:
-        #         return None
-        #
-        #     if not conn_from.is_connected:
-        #         return None
-
-    @property
-    def treble(self):
-        return self.__get_interface(IAudioTreble._iid_)
-
-    @property
-    def volume(self):
-        return self.__volume
-
-    def __call__(self, device, device_topology):
-        self.__device = device
-        self.__device_topology = device_topology(endpoint=self)
-
-        session_manager = self.activate(IAudioSessionManager2)
-        if not session_manager:
-            session_manager = self.activate(IAudioSessionManager)
-
-        if session_manager:
-            session_manager = session_manager(endpoint=self)
-        else:
-            session_manager = None
-
-        self.__session_manager = session_manager
-
-        endpoint_volume = self.activate(IAudioEndpointVolumeEx)
-
-        if not endpoint_volume:
-            endpoint_volume = self.activate(IAudioEndpointVolume)
-
-        if endpoint_volume:
-            endpoint_volume = endpoint_volume(endpoint=self)
-        else:
-            endpoint_volume = None
-
-        self.__volume = endpoint_volume
-
-        return self
-
-    @property
-    def connector(self):
-        connector = POINTER(IConnector)()
-        self.__device_topology.GetConnector(0, ctypes.byref(connector))
-        return connector(endpoint=self)
-
-    @property
-    def subunits(self):
-        res = []
-        pCount = self.__device_topology.GetSubunitCount()
-
-        for i in range(pCount):
-            subunit = POINTER(ISubunit)()
-            self.__device_topology.GetSubunit(i, ctypes.byref(subunit))
-            res.append(subunit(endpoint=self))
-
-        return res
-
-    @property
-    def device(self):
-        return self.__device
-
-    def set_default(self, role):
-        policy_config = comtypes.CoCreateInstance(
-            CLSID_PolicyConfigVistaClient,
-            IPolicyConfigVista,
-            comtypes.CLSCTX_ALL
-        )
-
-        policy_config.SetDefaultEndpoint(self.id, ERole.get(role))
-
-    @property
-    def is_default(self):
-        return IMMDeviceEnumerator.default_audio_endpoint(self.data_flow, self.data_flow) == self
-
-    def __iter__(self):
-        if self.__session_manager is not None:
-            for session in self.__session_manager:
-                yield session
 
 
 class Device(object):
@@ -729,6 +378,7 @@ class Device(object):
         res = []
         pCount = self.__device_topology.GetConnectorCount()
         for i in range(pCount):
+            # noinspection PyTypeChecker
             connector = POINTER(IConnector)()
             self.__device_topology.GetConnector(i, ctypes.byref(connector))
             res.append(connector(endpoint=self))
@@ -741,6 +391,7 @@ class Device(object):
         pCount = self.__device_topology.GetSubunitCount()
 
         for i in range(pCount):
+            # noinspection PyTypeChecker
             subunit = POINTER(ISubunit)()
             self.__device_topology.GetSubunit(i, ctypes.byref(subunit))
             res.append(subunit(endpoint=self))
@@ -762,6 +413,7 @@ class Device(object):
     def __iter__(self):
         endpoint_ids = []
         id_ = self.id
+        # noinspection PyTypeChecker
         endpoint_enum = POINTER(IMMDeviceCollection)()
 
         self.__device_enum.EnumAudioEndpoints(
@@ -801,6 +453,543 @@ class Device(object):
             yield endpoint
 
 
+class IMMDevice(comtypes.IUnknown):
+    """
+    Main entry point for an audio endpoint
+    """
+    _case_insensitive_ = False
+    _iid_ = IID_IMMDevice
+    _methods_ = (
+        COMMETHOD(
+            [],
+            HRESULT,
+            'Activate',
+            (['in'], REFIID, 'iid'),
+            (['in'], DWORD, 'dwClsCtx'),
+            (['in'], PPROPVARIANT, 'pActivationParams', None),
+            (['out'], POINTER(LPVOID), 'ppInterface')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'OpenPropertyStore',
+            (['in'], DWORD, 'stgmAccess'),
+            (['out'], POINTER(PIPropertyStore), 'ppProperties'),
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetId',
+            (['out'], POINTER(LPWSTR), 'ppstrId')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetState',
+            (['out'], LPDWORD, 'pdwState')
+        )
+    )
+
+    @property
+    def device_name(self):
+        """
+        Name of the device this endpoint belongs to
+        """
+        return self.get_property(PKEY_DeviceInterface_FriendlyName)
+
+    def get_property(self, key):
+        """
+        Internal Use
+        """
+        # noinspection PyUnresolvedReferences
+        pStore = self.OpenPropertyStore(STGM_READ)
+        try:
+            return pStore.GetValue(key)
+        except comtypes.COMError:
+            raise AttributeError
+
+    def set_property(self, key, _):
+        """
+        Internal use
+        """
+        # noinspection PyUnresolvedReferences
+        pStore = self.OpenPropertyStore(STGM_WRITE)
+        try:
+            return pStore.GetValue(key)
+        except comtypes.COMError:
+            raise AttributeError
+
+    def activate(self, cls):
+        """
+        Internal use
+        """
+        try:
+            # noinspection PyUnresolvedReferences
+            return ctypes.cast(
+                self.Activate(
+                    cls._iid_,
+                    comtypes.CLSCTX_INPROC_SERVER,
+                    None
+                ),
+                POINTER(cls)
+            )
+
+        except comtypes.COMError:
+            pass
+
+    @property
+    def state(self) -> int:
+        # noinspection PyUnresolvedReferences
+        state = self.GetState()
+        if state == DEVICE_STATE_ACTIVE:
+            return DEVICE_STATE_ACTIVE
+
+        if state == DEVICE_STATE_DISABLED:
+            return DEVICE_STATE_DISABLED
+
+        if state == DEVICE_STATE_NOTPRESENT:
+            return DEVICE_STATE_NOTPRESENT
+
+        if state == DEVICE_STATE_UNPLUGGED:
+            return DEVICE_STATE_UNPLUGGED
+
+    @property
+    def id(self):
+        # noinspection PyUnresolvedReferences
+        data = self.GetId()
+        id_ = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+        return id_
+
+    @property
+    def audio_client(self):
+        # noinspection PyTypeChecker
+        audio_client = POINTER(IAudioClient)()
+        self.activate(audio_client)
+        return audio_client(self)
+
+    @property
+    def data_flow(self) -> EDataFlow:
+        """
+        The direction of the audio (in/out)
+
+        one of the `EDataFlow` attributes
+        """
+        endpoint = self.QueryInterface(IMMEndpoint)
+        if endpoint:
+            return EDataFlow.get(endpoint.GetDataFlow().value)
+
+    @property
+    def name(self):
+        """
+        Endpoints friendly name
+        """
+        val = self.get_property(PKEY_Device_FriendlyName)
+        return utils.convert_to_string(val)
+
+    @property
+    def description(self):
+        """
+        Endpoints description
+        """
+        val = self.get_property(PKEY_Device_DeviceDesc)
+        return utils.convert_to_string(val)
+
+    @property
+    def form_factor(self) -> EndpointFormFactor:
+        """
+        The endpoint  form factor
+
+        One of `EndpointFormFactor` attributes
+        """
+        form_factor = self.get_property(PKEY_AudioEndpoint_FormFactor)
+        return EndpointFormFactor.get(form_factor)
+
+    @property
+    def type(self) -> NodeTypeGUID:
+        sub_type = self.get_property(PKEY_AudioEndpoint_JackSubType)
+        sub_type_guid = str(sub_type)
+        value = NodeTypeGUID.get(sub_type_guid)
+        if value is None:
+            return NodeTypeGUID('Unknown', GUID_NULL)
+        return value
+
+    @property
+    def full_range_speakers(self) -> AudioSpeakers:
+        return AudioSpeakers(
+            self.get_property(PKEY_AudioEndpoint_FullRangeSpeakers)
+        )
+
+    @property
+    def guid(self) -> GUID:
+        return self.get_property(PKEY_AudioEndpoint_GUID)
+
+    @property
+    def physical_speakers(self) -> AudioSpeakers:
+        return AudioSpeakers(
+            self.get_property(PKEY_AudioEndpoint_PhysicalSpeakers)
+        )
+
+    @property
+    def system_effects(self) -> bool:
+        return bool(
+            self.get_property(PKEY_AudioEndpoint_Disable_SysFx)
+        )
+
+    @property
+    def hdcp_capable(self) -> bool:
+        js = self.jack_sink_information
+        if js is None:
+            return False
+        return js.hdcp_capable
+
+    @property
+    def ai_capable(self) -> bool:
+        js = self.jack_sink_information
+        if js is None:
+            return False
+
+        return js.ai_capable
+
+    @property
+    def connector_type(self) -> ConnectorType:
+        connector = self.connector.connected_to
+        return connector.type
+
+    @property
+    def connector_name(self) -> str:
+        connector = self.connector.connected_to
+        part = connector.part
+
+        return part.name
+
+    @property
+    def connector_subtype(self) -> KSNODETYPE:
+        connector = self.connector.connected_to
+        part = connector.part
+
+        return part.sub_type
+
+    @property
+    def connector_location(self) -> str:
+        jd = self.jack_descriptions
+        if not jd:
+            return 'Unknown'
+
+        jd = jd[0]
+
+        return jd.location
+
+    @property
+    def connector_style(self) -> EPcxConnectionType:
+        js = self.jack_sink_information
+        if js is not None:
+            return js.connection_type
+
+        jd = self.jack_descriptions
+        if not jd:
+            return ENUM_VALUE(-1, 'Unknown')
+
+        jd = jd[0]
+
+        return jd.connection_type
+
+    @property
+    def presence_detection(self) -> bool:
+        jd = self.jack_descriptions
+        if not jd:
+            return False
+
+        jd = jd[0]
+
+        return jd.presence_detection
+
+    @property
+    def connector_color(self) -> tuple:
+        jd = self.jack_descriptions
+        if not jd:
+            if 'green' in self.connector_name.lower():
+                return 0, 255, 0, 255
+            if 'pink' in self.connector_name.lower():
+                return 255, 128, 192, 255
+            if 'blue' in self.connector_name.lower():
+                return 0, 0, 255, 255
+
+            return 0, 0, 0, 0
+
+        jd = jd[0]
+
+        return jd.color + (255,)
+
+    @property
+    def is_connected(self) -> bool:
+        jd = self.jack_descriptions
+        if not jd:
+            return False
+
+        jd = jd[0]
+
+        return jd.is_connected
+
+    @property
+    def jack_descriptions(self) -> list:
+        conn_to = self.connector.connected_to
+        if conn_to is None:
+            return []
+
+        part = conn_to.part
+        jack_description = part.activate(IKsJackDescription)
+        if not jack_description:
+            return []
+
+        jack_description2 = part.activate(IKsJackDescription2)
+        if not jack_description2:
+            jack_description2 = None
+
+        jds = list(jack_description)
+
+        if jack_description2 is None:
+            jd2s = [None] * len(jds)
+        else:
+            jd2s = list(jack_description2)
+
+        res = []
+
+        for jd1, jd2 in zip(jds, jd2s):
+            res.append(JackDescription(jd1, jd2))
+
+        return res
+
+    @property
+    def jack_sink_information(self) -> KSJACK_SINK_INFORMATION:
+        conn_to = self.connector.connected_to
+        if conn_to is None:
+            return KSJACK_SINK_INFORMATION()
+
+        part = conn_to.part
+        sink_information = part.activate(IKsJackSinkInformation)
+
+        if sink_information:
+            return sink_information.GetJackSinkInformation()
+
+    @property
+    def has_audio(self):
+        volume = self.volume
+
+        if volume is None:
+            return -1
+
+        # noinspection PyProtectedMember
+        peak_meter = volume._peak_meter
+        if peak_meter is None:
+            return -1
+
+        pfPeak = FLOAT()
+        peak_meter.GetPeakValue(ctypes.byref(pfPeak))
+        return pfPeak.value > 1E-08
+
+    @property
+    def auto_gain_control(self) -> IAudioAutoGainControl:
+        return self.__get_interface(IAudioAutoGainControl)
+
+    @property
+    def bass(self) -> IAudioBass:
+        return self.__get_interface(IAudioBass)
+
+    @property
+    def channel_config(self) -> IAudioChannelConfig:
+        return self.__get_interface(IAudioChannelConfig)
+
+    @property
+    def input(self) -> IAudioInputSelector:
+        return self.__get_interface(IAudioInputSelector)
+
+    @property
+    def loudness(self) -> IAudioLoudness:
+        return self.__get_interface(IAudioLoudness)
+
+    @property
+    def midrange(self) -> IAudioMidrange:
+        return self.__get_interface(IAudioMidrange)
+
+    @property
+    def output(self) -> IAudioOutputSelector:
+        return self.__get_interface(IAudioOutputSelector)
+
+    @property
+    def treble(self) -> IAudioTreble:
+        return self.__get_interface(IAudioTreble)
+
+    def __get_interface(self, cls):
+        # The device topology for an endpoint device always
+        # contains just one connector (connector number 0).
+        outgoing = True
+        pConnFrom = self.connector
+
+        # Outer loop: Each iteration traverses the data path
+        # through a device topology starting at the input
+        # connector and ending at the output connector.
+        while True:
+
+            #  Does this connector connect to another device?
+            if not pConnFrom.is_connected:
+                # This is the end of the data path that
+                # stretches from the endpoint device to the
+                # system bus or external bus. Verify that
+                # the connection type is Software_IO.
+                if pConnFrom.type == ConnectorType.Software_IO:
+                    break
+
+            # Get the connector in the next device topology,
+            # which lies on the other side of the connection.
+            pConnTo = pConnFrom.connected_to
+
+            # Get the connector's IPart interface.
+            pPartPrev = pConnTo.part
+
+            # Inner loop: Each iteration traverses one link in a
+            # device topology and looks for input multiplexers.
+            while True:
+                # Follow downstream link to next part.
+                if outgoing:
+                    pParts = pPartPrev.outgoing
+                else:
+                    pParts = pPartPrev.incoming
+
+                if not pParts:
+                    if outgoing:
+                        outgoing = False
+                        pParts = pPartPrev.incoming
+                        if not pParts:
+                            return
+                    else:
+                        return
+
+                #     pParts = pPartPrev.incoming
+                #
+                # if not pParts:
+                #     return
+
+                pPartNext = list(pParts)[0]
+                parttype = pPartNext.type
+
+                # Failure of the following call means only that
+                # the part is not a MUX (input selector).
+                for p in pParts:
+                    interface = p.activate(cls)
+
+                    if interface:
+                        return interface
+
+                if parttype == PartType.Connector:
+                    # We've reached the output connector that
+                    # lies at the end of this device topology.
+                    pConnFrom = pPartNext.connector
+                    break
+
+                pPartPrev = pPartNext
+
+        #
+        # while True:
+        #     try:
+        #         conn_from = conn_from.connected_to
+        #     except comtypes.COMError:
+        #         return None
+        #
+        #     part = conn_from.part
+        #     device_topology = part.device_topology
+        #     for subunit in device_topology.subunits:
+        #         part = subunit.part
+        #
+        #
+        #     if conn_from.type == ConnectorType.Software_IO:
+        #         return None
+        #
+        #     if not conn_from.is_connected:
+        #         return None
+
+    @property
+    def volume(self) -> IAudioEndpointVolumeEx:
+        return self.__volume
+
+    def __call__(self, device, device_topology):
+        self.__device = device
+        self.__device_topology = device_topology(endpoint=self)
+
+        session_manager = self.activate(IAudioSessionManager2)
+        if not session_manager:
+            session_manager = self.activate(IAudioSessionManager)
+
+        if session_manager:
+            # noinspection PyCallingNonCallable
+            session_manager = session_manager(endpoint=self)
+        else:
+            session_manager = None
+
+        self.__session_manager = session_manager
+
+        endpoint_volume = self.activate(IAudioEndpointVolumeEx)
+
+        if not endpoint_volume:
+            endpoint_volume = self.activate(IAudioEndpointVolume)
+
+        if endpoint_volume:
+            # noinspection PyCallingNonCallable
+            endpoint_volume = endpoint_volume(endpoint=self)
+        else:
+            endpoint_volume = None
+
+        self.__volume = endpoint_volume
+
+        return self
+
+    @property
+    def connector(self) -> IConnector:
+        # noinspection PyTypeChecker
+        connector = POINTER(IConnector)()
+        self.__device_topology.GetConnector(0, ctypes.byref(connector))
+        return connector(endpoint=self)
+
+    @property
+    def subunits(self) -> list:
+        res = []
+        pCount = self.__device_topology.GetSubunitCount()
+
+        for i in range(pCount):
+            # noinspection PyTypeChecker
+            subunit = POINTER(ISubunit)()
+            self.__device_topology.GetSubunit(i, ctypes.byref(subunit))
+            res.append(subunit(endpoint=self))
+
+        return res
+
+    @property
+    def device(self) -> Device:
+        return self.__device
+
+    def set_default(self, role):
+        policy_config = comtypes.CoCreateInstance(
+            CLSID_PolicyConfigVistaClient,
+            IPolicyConfigVista,
+            comtypes.CLSCTX_ALL
+        )
+
+        policy_config.SetDefaultEndpoint(self.id, ERole.get(role))
+
+    @property
+    def is_default(self) -> bool:
+        return IMMDeviceEnumerator.default_audio_endpoint(self.data_flow, self.data_flow) == self
+
+    def __iter__(self):
+        """
+        Sessions
+        """
+        if self.__session_manager is not None:
+            for session in self.__session_manager:
+                yield session
+
+
+# noinspection PyTypeChecker
 PIMMDevice = POINTER(IMMDevice)
 
 
@@ -819,6 +1008,7 @@ class IMMDeviceActivator(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIMMDeviceActivator = POINTER(IMMDeviceActivator)
 
 
@@ -842,13 +1032,17 @@ class IMMDeviceCollection(comtypes.IUnknown):
     )
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetCount()
         for i in range(count):
+            # noinspection PyTypeChecker
             item = POINTER(IMMDevice)()
+            # noinspection PyUnresolvedReferences
             self.Item(UINT(i), ctypes.byref(item))
             yield item
 
 
+# noinspection PyTypeChecker
 PIMMDeviceCollection = ctypes.POINTER(IMMDeviceCollection)
 
 
@@ -896,8 +1090,9 @@ class _IMMDeviceEnumerator(comtypes.IUnknown):
 
     def __iter__(self):
         device_ids = []
+        # noinspection PyTypeChecker
         endpoint_enum = POINTER(IMMDeviceCollection)()
-
+        # noinspection PyUnresolvedReferences
         self.EnumAudioEndpoints(
             EDataFlow.eAll,
             DEVICE_STATE_MASK_ALL,
@@ -952,6 +1147,8 @@ class IMMDeviceEnumerator(object):
             self.__device_enum.UnregisterEndpointNotificationCallback(self.__notification_client)
             self.__notification_client = None
 
+        IMMDeviceEnumerator._instance = None
+
     def __iter__(self):
         for device in self.__device_enum:
             yield device
@@ -959,9 +1156,10 @@ class IMMDeviceEnumerator(object):
     @classmethod
     def default_audio_endpoint(cls, data_flow, role):
         self = cls._instance
+        # noinspection PyTypeChecker
         endp = POINTER(IMMDevice)()
 
-        self.GetDefaultAudioEndpoint(
+        self.__device_enum.GetDefaultAudioEndpoint(
             data_flow,
             role,
             ctypes.byref(endp)

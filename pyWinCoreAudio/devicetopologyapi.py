@@ -19,79 +19,102 @@
 from .data_types import *
 import comtypes
 import ctypes
-from .enum_constants import (
-    PConnectorType,
-    ConnectorType,
+from .mmdeviceapi import (
     PDataFlow,
     DataFlow,
-    KSJACK_SINK_CONNECTIONTYPE,
-    PPartType,
-    PartType,
-    EPcxGenLocation,
-    EPcxGeoLocation,
-    EPcxConnectionType,
-    EPxcPortConnection
 )
-
-from .iid import (
-    IID_IAudioAutoGainControl,
-    IID_IAudioBass,
-    IID_IAudioMidrange,
-    IID_IAudioTreble,
-    IID_IAudioChannelConfig,
-    IID_IAudioInputSelector,
-    IID_IAudioOutputSelector,
-    IID_IAudioLoudness,
-    IID_IAudioMute,
-    IID_IAudioPeakMeter,
-    IID_IAudioVolumeLevel,
-    IID_IConnector,
-    IID_IControlInterface,
-    IID_IDeviceSpecificProperty,
-    IID_IDeviceTopology,
-    IID_IKsFormatSupport,
-    IID_IKsJackDescription,
-    IID_IKsJackDescription2,
-    IID_IKsJackSinkInformation,
-    IID_IPartsList,
-    IID_IPart,
-    IID_IPerChannelDbLevel,
-    IID_ISubunit,
-    IID_IControlChangeNotify,
-    CLSID_DeviceTopology,
-    IID_DevTopologyLib,
-)
-from .. import utils
-
-from ..signal import ON_PART_CHANGE
-
-from .constant import (
-    SPEAKER_FRONT_LEFT,
-    SPEAKER_FRONT_RIGHT,
-    SPEAKER_FRONT_CENTER,
-    SPEAKER_LOW_FREQUENCY,
-    SPEAKER_BACK_LEFT,
-    SPEAKER_BACK_RIGHT,
-    SPEAKER_FRONT_LEFT_OF_CENTER,
-    SPEAKER_FRONT_RIGHT_OF_CENTER,
-    SPEAKER_BACK_CENTER,
-    SPEAKER_SIDE_LEFT,
-    SPEAKER_SIDE_RIGHT,
-    SPEAKER_TOP_CENTER,
-    SPEAKER_TOP_FRONT_LEFT,
-    SPEAKER_TOP_FRONT_CENTER,
-    SPEAKER_TOP_FRONT_RIGHT,
-    SPEAKER_TOP_BACK_LEFT,
-    SPEAKER_TOP_BACK_CENTER,
-    SPEAKER_TOP_BACK_RIGHT,
-    JACKDESC2_PRESENCE_DETECT_CAPABILITY,
-    JACKDESC2_DYNAMIC_FORMAT_CHANGE_CAPABILITY,
+from .ksmedia import (
+    PKSJACK_DESCRIPTION,
+    PKSJACK_DESCRIPTION2,
+    PKSJACK_SINK_INFORMATION,
     KSNODETYPE,
-    S_OK
 )
+from .ks import PKSDATAFORMAT
+from . import utils
+from .signal import ON_PART_CHANGE
+from .constant import S_OK
+
 
 _CoTaskMemFree = ctypes.windll.ole32.CoTaskMemFree
 
+IID_IPerChannelDbLevel = IID(
+    '{C2F8E001-F205-4BC9-99BC-C13B1E048CCB}'
+)
+IID_IAudioVolumeLevel = IID(
+    '{7FB7B48F-531D-44A2-BCB3-5AD5A134B3DC}'
+)
+IID_IAudioChannelConfig = IID(
+    '{BB11C46F-EC28-493C-B88A-5DB88062CE98}'
+)
+IID_IAudioLoudness = IID(
+    '{7D8B1437-DD53-4350-9C1B-1EE2890BD938}'
+)
+IID_IAudioInputSelector = IID(
+    '{4F03DC02-5E6E-4653-8F72-A030C123D598}'
+)
+IID_IAudioOutputSelector = IID(
+    '{BB515F69-94A7-429e-8B9C-271B3F11A3AB}'
+)
+IID_IAudioMute = IID(
+    '{DF45AEEA-B74A-4B6B-AFAD-2366B6AA012E}'
+)
+IID_IAudioBass = IID(
+    '{A2B1A1D9-4DB3-425D-A2B2-BD335CB3E2E5}'
+)
+IID_IAudioMidrange = IID(
+    '{5E54B6D7-B44B-40D9-9A9E-E691D9CE6EDF}'
+)
+IID_IAudioTreble = IID(
+    '{0A717812-694E-4907-B74B-BAFA5CFDCA7B}'
+)
+IID_IAudioAutoGainControl = IID(
+    '{85401FD4-6DE4-4b9d-9869-2D6753A82F3C}'
+)
+IID_IAudioPeakMeter = IID(
+    '{DD79923C-0599-45e0-B8B6-C8DF7DB6E796}'
+)
+IID_IDeviceSpecificProperty = IID(
+    '{3B22BCBF-2586-4af0-8583-205D391B807C}'
+)
+IID_IKsFormatSupport = IID(
+    '{3CB4A69D-BB6F-4D2B-95B7-452D2C155DB5}'
+)
+IID_IKsJackDescription = IID(
+    '{4509F757-2D46-4637-8E62-CE7DB944F57B}'
+)
+IID_IKsJackDescription2 = IID(
+    '{478F3A9B-E0C9-4827-9228-6F5505FFE76A}'
+)
+IID_IKsJackSinkInformation = IID(
+    '{D9BD72ED-290F-4581-9FF3-61027A8FE532}'
+)
+IID_IPartsList = IID(
+    '{6DAA848C-5EB0-45CC-AEA5-998A2CDA1FFB}'
+)
+IID_IPart = IID(
+    '{AE2DE0E4-5BCA-4F2D-AA46-5D13F8FDB3A9}'
+)
+IID_IConnector = IID(
+    '{9c2c4058-23f5-41de-877a-df3af236a09e}'
+)
+IID_ISubunit = IID(
+    '{82149A85-DBA6-4487-86BB-EA8F7FEFCC71}'
+)
+IID_IControlInterface = IID(
+    '{45d37c3f-5140-444a-ae24-400789f3cbf3}'
+)
+IID_IControlChangeNotify = IID(
+    '{A09513ED-C709-4d21-BD7B-5F34C47F3947}'
+)
+IID_IDeviceTopology = IID(
+    '{2A07407E-6497-4A18-9787-32F79BD0D98F}'
+)
+CLSID_DeviceTopology = IID(
+    '{1DF639D0-5EC1-47AA-9379-828DC1AA8C59}'
+)
+IID_DevTopologyLib = (
+    '{51B9A01D-8181-4363-B59C-E678F476DD0E}'
+)
 
 VT_EMPTY = 0  # Not specified
 VT_NULL = 1  # Null
@@ -147,369 +170,24 @@ VT_ILLEGALMASKED = 4095  # Illegal masked value
 VT_TYPEMASK = 4095  # Type mask
 
 
-class AudioSpeakers(object):
+class PartType(ENUM):
+    Connector = 0
+    Subunit = 1
 
-    def __init__(self, value):
-        if value is None:
-            value = 0
 
-        self.front_left = value | SPEAKER_FRONT_LEFT == value
-        self.front_left_of_center = value | SPEAKER_FRONT_LEFT_OF_CENTER == value
-        self.front_center = value | SPEAKER_FRONT_CENTER == value
-        self.front_right_of_center = value | SPEAKER_FRONT_RIGHT_OF_CENTER == value
-        self.front_right = value | SPEAKER_FRONT_RIGHT == value
-        self.side_left = value | SPEAKER_SIDE_LEFT == value
-        self.side_right = value | SPEAKER_SIDE_RIGHT == value
-        self.back_left = value | SPEAKER_BACK_LEFT == value
-        self.back_center = value | SPEAKER_BACK_CENTER == value
-        self.back_right = value | SPEAKER_BACK_RIGHT == value
-        self.high_center = value | SPEAKER_TOP_CENTER == value
-        self.high_front_left = value | SPEAKER_TOP_FRONT_LEFT == value
-        self.high_front_center = value | SPEAKER_TOP_FRONT_CENTER == value
-        self.high_front_right = value | SPEAKER_TOP_FRONT_RIGHT == value
-        self.high_back_left = value | SPEAKER_TOP_BACK_LEFT == value
-        self.high_back_center = value | SPEAKER_TOP_BACK_CENTER == value
-        self.high_back_right = value | SPEAKER_TOP_BACK_RIGHT == value
-        self.subwoofer = value | SPEAKER_LOW_FREQUENCY == value
+PPartType = POINTER(PartType)
 
-    def __str__(self):
-        eye_level = sum([
-            self.front_left,
-            self.front_left_of_center,
-            self.front_center,
-            self.front_right_of_center,
-            self.front_right,
-            self.side_left,
-            self.side_right,
-            self.back_left,
-            self.back_center,
-            self.back_right
-        ])
 
-        three_d = sum([
-            self.high_center,
-            self.high_front_left,
-            self.high_front_center,
-            self.high_front_right,
-            self.high_back_left,
-            self.high_back_center,
-            self.high_back_right
-        ])
+class ConnectorType(ENUM):
+    Unknown_Connector = ENUM_VALUE(0, 'Unknown')
+    Physical_Internal = 1
+    Physical_External = 2
+    Software_IO = ENUM_VALUE(3, 'Software IO')
+    Software_Fixed = 4
+    Network = 5
 
-        sw = int(self.subwoofer)
-        if three_d:
-            return '{0}.{1}.{2}'.format(eye_level, sw, three_d)
-        if eye_level:
-            return '{0}.{1}'.format(eye_level, sw)
-        if sw:
-            return '{0}.{1}'.format(eye_level, sw)
-        return '0'
 
-
-class KSDATAFORMAT(ctypes.Structure):
-    """
-    At the minimum, a data format is specified by the MajorFormat, the SubFormat, and the Specifier members.
-    A family of similar data formats can share the same values for MajorFormat, SubFormat, and Specifier.
-    In that case, the specific data format is distinguished by additional data that follows the
-    Specifier member in memory.
-    """
-    _fields_ = [
-        ('FormatSize', ULONG),
-        ('Flags', ULONG),
-        ('SampleSize', ULONG),
-        ('Reserved', ULONG),
-        ('MajorFormat', GUID),
-        ('SubFormat', GUID),
-        ('Specifier', GUID)
-    ]
-
-    def __init__(self, *args, **kwargs):
-
-        ctypes.Structure.__init__(self, *args, **kwargs)
-
-        self.FormatSize = ctypes.sizeof(KSDATAFORMAT)
-
-    @property
-    def flags(self):
-        """
-        Set flags to KSDATAFORMAT_ATTRIBUTES (0x2) to indicate that the KSDATAFORMAT is followed in
-        memory by a KSMULTIPLE_ITEM of KSATTRIBUTE structures.
-        """
-        return self.Flags.value
-
-    @flags.setter
-    def flags(self, value):
-        self.Flags = value
-
-    @property
-    def sample_size(self):
-        """
-        Specifies the sample size of the data, for fixed sample sizes, or zero,
-        if the format has a variable sample size.
-        """
-        return self.SampleSize.value
-
-    @sample_size.setter
-    def sample_size(self, value):
-        self.SampleSize = value
-
-    @property
-    def major_format(self):
-        """
-        Specifies the general format type.
-
-        The data formats that are currently supported can be found in the
-        KSDATAFORMAT_TYPE_XXX symbolic constants in the ksmedia.h header file
-        that is included in the Windows Driver Kit (WDK).
-
-        A data stream that has no particular format should use
-        KSDATAFORMAT_TYPE_STREAM (defined in ks.h) as the value for its
-        MajorFormat
-        """
-        return self.MajorFormat
-
-    @major_format.setter
-    def major_format(self, value):
-        if not isinstance(value, GUID):
-            value = GUID(value)
-
-        self.MajorFormat = value
-
-    @property
-    def sub_format(self):
-        """
-        Specifies the subformat of a general format type.
-
-        The data subformats that are currently supported can be found in the
-        KSDATAFORMAT_SUBTYPE_XXX symbolic constants in the ksmedia.h header
-        file that is included in the WDK.
-
-        Major formats that do not support subformats should use the
-        KSDATAFORMAT_SUBTYPE_NONE value for this member.
-        """
-        return self.SubFormat
-
-    @sub_format.setter
-    def sub_format(self, value):
-        if not isinstance(value, GUID):
-            value = GUID(value)
-
-        self.SubFormat = value
-
-    @property
-    def specifier(self):
-        """
-        Specifies additional data format type information for a specific setting of MajorFormat and SubFormat.
-
-        The significance of this field is determined by the major format (and subformat, if the
-        major format supports subformats). For example, Specifier can represent a particular
-        encoding of a subformat, or it can be used to specify what type of data structure
-        follows KSDATAFORMAT in memory.
-
-        The following specifiers (defined in ks.h) are of general use:
-
-        KSDATAFORMAT_SPECIFIER_NONE: Stands for no specifier. Used for formats that do not support specifiers.
-        KSDATAFORMAT_SPECIFIER_FILENAME: Indicates that a null-terminated Unicode string immediately
-        follows the KSDATAFORMAT structure in memory.
-        KSDATAFORMAT_SPECIFIER_FILEHANDLE: Indicates that a file handle immediately follows KSDATAFORMAT in memory.
-        """
-        return self.Specifier
-
-    @specifier.setter
-    def specifier(self, value):
-        if not isinstance(value, GUID):
-            value = GUID(value)
-
-        self.Specifier = value
-
-
-PKSDATAFORMAT = POINTER(KSDATAFORMAT)
-
-
-class JackDescription(object):
-
-    def __init__(self, jd1, jd2):
-        self.__jd1 = jd1
-        self.__jd2 = jd2
-
-    @property
-    def presence_detection(self):
-        if self.__jd2 is None:
-            return False
-
-        return self.__jd2.presence_detection
-
-    @property
-    def dynamic_format_change(self):
-        if self.__jd2 is None:
-            return False
-
-        return self.__jd2.dynamic_format_change
-
-    @property
-    def channel_mapping(self):
-        return self.__jd1.channel_mapping
-
-    @property
-    def color(self):
-        return self.__jd1.color
-
-    @property
-    def connection_type(self):
-        return self.__jd1.connection_type
-
-    @property
-    def geo_location(self):
-        return self.__jd1.geo_location
-
-    @property
-    def gen_location(self):
-        return self.__jd1.gen_location
-
-    @property
-    def port_connection(self):
-        return self.__jd1.port_connection
-
-    @property
-    def is_connected(self):
-        return self.__jd1.is_connected
-
-    @property
-    def location(self):
-        return self.__jd1.location
-
-
-class KSJACK_DESCRIPTION(ctypes.Structure):
-    _fields_ = [
-        ('ChannelMapping', DWORD),
-        ('Color', COLORREF),
-        ('ConnectionType', EPcxConnectionType),
-        ('GeoLocation', EPcxGeoLocation),
-        ('GenLocation', EPcxGenLocation),
-        ('PortConnection', EPxcPortConnection),
-        ('IsConnected', BOOL)
-    ]
-
-    @property
-    def channel_mapping(self):
-        return AudioSpeakers(self.ChannelMapping)
-
-    @property
-    def color(self):
-        return utils.convert_triplet_to_rgb(self.Color)
-
-    @property
-    def connection_type(self):
-        return EPcxConnectionType.get(self.ConnectionType.value)
-
-    @property
-    def geo_location(self):
-        return EPcxGeoLocation.get(self.GeoLocation.value)
-
-    @property
-    def gen_location(self):
-        return EPcxGenLocation.get(self.GenLocation.value)
-
-    @property
-    def port_connection(self):
-        return EPxcPortConnection.get(self.PortConnection.value)
-
-    @property
-    def is_connected(self):
-        return bool(self.IsConnected)
-
-    @property
-    def location(self):
-        if str(self.geo_location):
-            return '{0}, {1}'.format(self.gen_location, self.geo_location)
-
-        return self.gen_location
-
-
-PKSJACK_DESCRIPTION = POINTER(KSJACK_DESCRIPTION)
-
-
-class LUID(ctypes.Structure):
-    _fields_ = [
-        ('LowPart', DWORD),
-        ('HighPart', LONG)
-    ]
-
-    @property
-    def value(self):
-        return self.HighPart << 8 | self.LowPart
-
-
-PLUID = POINTER(LUID)
-
-
-class tagKSJACK_SINK_INFORMATION(ctypes.Structure):
-    _fields_ = [
-        ('ConnType', KSJACK_SINK_CONNECTIONTYPE),
-        ('ManufacturerId', WORD),
-        ('ProductId', WORD),
-        ('AudioLatency', WORD),
-        ('HDCPCapable', BOOL),
-        ('AICapable', BOOL),
-        ('SinkDescriptionLength', UCHAR),
-        ('SinkDescription', (WCHAR * 32)),
-        ('PortId', LUID),
-    ]
-
-    @property
-    def manufacturer_id(self):
-        return self.ManufacturerId
-
-    @property
-    def product_id(self):
-        return self.ProductId
-
-    @property
-    def audio_latency(self):
-        return self.AudioLatency
-
-    @property
-    def hdcp_capable(self):
-        return bool(self.HDCPCapable)
-
-    @property
-    def ai_capable(self):
-        return bool(self.AICapable)
-
-    @property
-    def description(self):
-        return utils.convert_to_string(self.SinkDescription)
-
-    @property
-    def port_id(self):
-        return self.PortId.value
-
-    @property
-    def connection_type(self):
-        return KSJACK_SINK_CONNECTIONTYPE.get(self.ConnType.value)
-
-
-KSJACK_SINK_INFORMATION = tagKSJACK_SINK_INFORMATION
-PKSJACK_SINK_INFORMATION = POINTER(KSJACK_SINK_INFORMATION)
-
-
-class tagKSJACK_DESCRIPTION2(ctypes.Structure):
-    _fields_ = [
-        ('DeviceStateInfo', DWORD),
-        ('JackCapabilities', DWORD)
-    ]
-
-    @property
-    def presence_detection(self):
-        return bool(self.JackCapabilities & JACKDESC2_PRESENCE_DETECT_CAPABILITY)
-
-    @property
-    def dynamic_format_change(self):
-        return bool(self.JackCapabilities & JACKDESC2_DYNAMIC_FORMAT_CHANGE_CAPABILITY)
-
-
-KSJACK_DESCRIPTION2 = tagKSJACK_DESCRIPTION2
-PKSJACK_DESCRIPTION2 = POINTER(KSJACK_DESCRIPTION2)
+PConnectorType = POINTER(ConnectorType)
 
 
 class InterfaceBase(comtypes.IUnknown):
@@ -551,13 +229,16 @@ class IAudioAutoGainControl(InterfaceBase):
 
     @property
     def enabled(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.GetEnabled())
 
     @enabled.setter
     def enabled(self, value):
+        # noinspection PyUnresolvedReferences
         self.SetEnabled(BOOL(value), NULL)
 
 
+# noinspection PyTypeChecker
 PIAudioAutoGainControl = POINTER(IAudioAutoGainControl)
 
 
@@ -635,6 +316,7 @@ class IPerChannelDbLevel(InterfaceBase):
     )
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetChannelCount().contents
 
         for i in range(count):
@@ -643,7 +325,9 @@ class IPerChannelDbLevel(InterfaceBase):
             pfStepping = FLOAT()
             pfLevelDB = FLOAT()
 
+            # noinspection PyUnresolvedReferences
             self.GetLevel(i, ctypes.byref(pfLevelDB))
+            # noinspection PyUnresolvedReferences
             self.GetLevelRange(
                 i,
                 ctypes.byref(pfMinLevelDB),
@@ -662,9 +346,11 @@ class IPerChannelDbLevel(InterfaceBase):
             yield cls(pfLevelDB.value)
 
     def set_uniform_level(self, value):
+        # noinspection PyUnresolvedReferences
         self.SetLevelUniform(FLOAT(value), NULL)
 
 
+# noinspection PyTypeChecker
 PIPerChannelDbLevel = POINTER(IPerChannelDbLevel)
 
 
@@ -672,6 +358,7 @@ class IAudioBass(IPerChannelDbLevel):
     _iid_ = IID_IAudioBass
 
 
+# noinspection PyTypeChecker
 PIAudioBass = POINTER(IAudioBass)
 
 
@@ -679,6 +366,7 @@ class IAudioMidrange(IPerChannelDbLevel):
     _iid_ = IID_IAudioMidrange
 
 
+# noinspection PyTypeChecker
 PIAudioMidrange = POINTER(IAudioMidrange)
 
 
@@ -686,6 +374,7 @@ class IAudioTreble(IPerChannelDbLevel):
     _iid_ = IID_IAudioTreble
 
 
+# noinspection PyTypeChecker
 PIAudioTreble = POINTER(IAudioTreble)
 
 
@@ -693,6 +382,7 @@ class IAudioVolumeLevel(IPerChannelDbLevel):
     _iid_ = IID_IAudioVolumeLevel
 
 
+# noinspection PyTypeChecker
 PIAudioVolumeLevel = POINTER(IAudioVolumeLevel)
 
 
@@ -724,13 +414,16 @@ class IAudioChannelConfig(InterfaceBase):
 
     @property
     def value(self):
+        # noinspection PyUnresolvedReferences
         return self.GetChannelConfig()
 
     @value.setter
     def value(self, val):
+        # noinspection PyUnresolvedReferences
         self.SetChannelConfig(DWORD(val), NULL)
 
 
+# noinspection PyTypeChecker
 PIAudioChannelConfig = POINTER(IAudioChannelConfig)
 
 
@@ -755,13 +448,16 @@ class IAudioInputSelector(InterfaceBase):
 
     @property
     def value(self):
+        # noinspection PyUnresolvedReferences
         return self.GetSelection()
 
     @value.setter
     def value(self, val):
+        # noinspection PyUnresolvedReferences
         self.SetSelection(UINT(val), NULL)
 
 
+# noinspection PyTypeChecker
 PIAudioInputSelector = POINTER(IAudioInputSelector)
 
 
@@ -785,13 +481,16 @@ class IAudioLoudness(InterfaceBase):
 
     @property
     def enabled(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.GetEnabled())
 
     @enabled.setter
     def enabled(self, val):
+        # noinspection PyUnresolvedReferences
         self.SetEnabled(BOOL(val), NULL)
 
 
+# noinspection PyTypeChecker
 PIAudioLoudness = POINTER(IAudioLoudness)
 
 
@@ -816,13 +515,16 @@ class IAudioMute(InterfaceBase):
 
     @property
     def enabled(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.GetMute())
 
     @enabled.setter
     def enabled(self, val):
+        # noinspection PyUnresolvedReferences
         self.SetMute(BOOL(val), NULL)
 
 
+# noinspection PyTypeChecker
 PIAudioMute = POINTER(IAudioMute)
 
 
@@ -847,13 +549,16 @@ class IAudioOutputSelector(InterfaceBase):
 
     @property
     def value(self):
+        # noinspection PyUnresolvedReferences
         return self.GetSelection()
 
     @value.setter
     def value(self, val):
+        # noinspection PyUnresolvedReferences
         self.SetSelection(UINT(val), NULL)
 
 
+# noinspection PyTypeChecker
 PIAudioOutputSelector = POINTER(IAudioOutputSelector)
 
 
@@ -877,14 +582,17 @@ class IAudioPeakMeter(InterfaceBase):
     )
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetChannelCount()
 
         for i in range(count):
             pfLevel = FLOAT()
+            # noinspection PyUnresolvedReferences
             self.GetLevel(UINT(i), ctypes.byref(pfLevel))
             yield pfLevel.value
 
 
+# noinspection PyTypeChecker
 PIAudioPeakMeter = POINTER(IAudioPeakMeter)
 
 
@@ -909,6 +617,7 @@ class IConnector(comtypes.IUnknown):
 
     @property
     def connected_to_connector_id(self):
+        # noinspection PyUnresolvedReferences
         data = self.GetConnectorIdConnectedTo()
         connector_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -916,6 +625,7 @@ class IConnector(comtypes.IUnknown):
 
     @property
     def connected_to_device_id(self):
+        # noinspection PyUnresolvedReferences
         data = self.GetDeviceIdConnectedTo()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -923,32 +633,40 @@ class IConnector(comtypes.IUnknown):
 
     @property
     def type(self):
+        # noinspection PyUnresolvedReferences
         type_ = self.GetType().value
         return ConnectorType.get(type_)
 
     @property
     def data_flow(self):
+        # noinspection PyUnresolvedReferences
         data_flow = self.GetDataFlow().value
         return DataFlow.get(data_flow)
 
     def connect_to(self, connector):
+        # noinspection PyUnresolvedReferences
         self.ConnectTo(ctypes.byref(connector))
 
     def disconnect(self):
+        # noinspection PyUnresolvedReferences
         self.Disconnect()
 
     @property
     def is_connected(self):
+        # noinspection PyUnresolvedReferences
         return bool(self.IsConnected())
 
     @property
     def connected_to(self):
+        # noinspection PyTypeChecker
         ppConTo = POINTER(IConnector)()
+        # noinspection PyUnresolvedReferences
         self.GetConnectedTo(ctypes.byref(ppConTo))
 
         return ppConTo(device=self.__device, endpoint=self.__endpoint)
 
 
+# noinspection PyTypeChecker
 PIConnector = POINTER(IConnector)
 
 
@@ -1023,6 +741,7 @@ class IControlInterface(comtypes.IUnknown):
 
     @property
     def name(self):
+        # noinspection PyUnresolvedReferences
         data = self.GetName()
         name = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -1031,10 +750,12 @@ class IControlInterface(comtypes.IUnknown):
     @property
     def iid(self):
         guid = GUID()
+        # noinspection PyUnresolvedReferences
         self.GetIID(ctypes.byref(guid))
         return guid
 
 
+# noinspection PyTypeChecker
 PIControlInterface = POINTER(IControlInterface)
 
 
@@ -1111,7 +832,7 @@ class IDeviceSpecificProperty(InterfaceBase):
 
     @property
     def value(self):
-
+        # noinspection PyUnresolvedReferences
         data_type = self._GetDataType()
 
         mapping = {
@@ -1142,20 +863,23 @@ class IDeviceSpecificProperty(InterfaceBase):
         if data_type in (VT_LPWSTR, VT_LPSTR, VT_BSTR):
             pvValue = NULL
             pcbValue = DWORD()
+            # noinspection PyUnresolvedReferences
             self.GetValue(pvValue, ctypes.byref(pcbValue))
 
             pvValue = (container * pcbValue.value)
+            # noinspection PyUnresolvedReferences
             self.GetValue(pvValue, ctypes.byref(pcbValue))
 
             return utils.convert_to_string(pvValue)
 
         pvValue = container
         pcbValue = DWORD(ctypes.sizeof(pvValue))
-        self._GetValue(ctypes.byref(pvValue), ctypes.byref(pcbValue))
+        # noinspection PyUnresolvedReferences
+        self.GetValue(ctypes.byref(pvValue), ctypes.byref(pcbValue))
 
         try:
             pvValue = pvValue.value
-        except:
+        except AttributeError:
             pass
 
         if data_type == VT_BOOL:
@@ -1165,6 +889,7 @@ class IDeviceSpecificProperty(InterfaceBase):
         plMax = LONG()
         plStepping = LONG()
 
+        # noinspection PyUnresolvedReferences
         self.Get4BRange(ctypes.byref(plMin), ctypes.byref(plMax), ctypes.byref(plStepping))
 
         namespace = {
@@ -1180,6 +905,7 @@ class IDeviceSpecificProperty(InterfaceBase):
         return cls(pvValue)
 
 
+# noinspection PyTypeChecker
 PIDeviceSpecificProperty = POINTER(IDeviceSpecificProperty)
 
 
@@ -1203,6 +929,7 @@ class ISubunit(comtypes.IUnknown):
         return part(device=self.__device, endpoint=self.__endpoint)
 
 
+# noinspection PyTypeChecker
 PISubunit = POINTER(ISubunit)
 
 
@@ -1221,14 +948,18 @@ class IPartsList(comtypes.IUnknown):
         return self
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetCount()
 
         for i in range(count):
+            # noinspection PyTypeChecker
             part = POINTER(IPart)()
+            # noinspection PyUnresolvedReferences
             self.GetPart(i, ctypes.byref(part))
             yield part(device=self.__device, endpoint=self.__endpoint)
 
 
+# noinspection PyTypeChecker
 PIPartsList = POINTER(IPartsList)
 
 
@@ -1243,13 +974,30 @@ class IPart(comtypes.IUnknown):
         comtypes.IUnknown.__init__(self)
 
     @property
+    def control_interface(self):
+
+        # noinspection PyTypeChecker
+        control_interface = POINTER(IControlInterface)()
+        # noinspection PyUnresolvedReferences
+        return self.GetControlInterface(0, ctypes.byref(control_interface))
+
+    @property
+    def connector(self):
+        connector = self.QueryInterface(IConnector)
+        if connector:
+            return connector(device=self.__device, endpoint=self.__endpoint)
+
+    @property
     def device_topology(self):
+        # noinspection PyTypeChecker
         device_topology = POINTER(IDeviceTopology)()
+        # noinspection PyUnresolvedReferences
         self.GetTopologyObject(ctypes.byref(device_topology))
         return device_topology(device=self.__device, endpoint=self.__endpoint)
 
     @property
     def name(self):
+        # noinspection PyUnresolvedReferences
         data = self.GetName()
         name = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -1257,6 +1005,7 @@ class IPart(comtypes.IUnknown):
 
     @property
     def global_id(self):
+        # noinspection PyUnresolvedReferences
         data = self.GetGlobalId()
         g_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -1264,20 +1013,24 @@ class IPart(comtypes.IUnknown):
 
     @property
     def local_id(self):
+        # noinspection PyUnresolvedReferences
         return self.GetLocalId()
 
     @property
-    def part_type(self):
+    def type(self):
+        # noinspection PyUnresolvedReferences
         return PartType.get(self.GetPartType().value)
 
     @property
     def sub_type(self):
         guid = GUID()
+        # noinspection PyUnresolvedReferences
         self.GetSubType(ctypes.byref(guid))
 
         return KSNODETYPE.get(guid, '')
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetControlInterfaceCount()
         mapping = {
             IID_IAudioAutoGainControl: IAudioAutoGainControl,
@@ -1296,30 +1049,37 @@ class IPart(comtypes.IUnknown):
             IID_IKsJackDescription: IKsJackDescription
         }
         for i in range(count):
+            # noinspection PyTypeChecker
             control_interface = POINTER(IControlInterface)()
+            # noinspection PyUnresolvedReferences
             self.GetControlInterface(i, ctypes.byref(control_interface))
+
             name = control_interface.name
             iid = control_interface.iid
 
             if iid in mapping:
                 control_interface = self.activate(mapping[iid])
                 if control_interface:
+                    # noinspection PyUnresolvedReferences,PyCallingNonCallable
                     yield control_interface(name)
 
     @property
     def incoming(self):
-        parts_list = POINTER(IPartsList)()
-        self.EnumPartsIncoming(ctypes.byref(parts_list))
-        return parts_list(device=self.__device, endpoint=self.__endpoint)
+        # noinspection PyUnresolvedReferences
+        parts_list = self.EnumPartsIncoming()
+        if parts_list:
+            return parts_list(device=self.__device, endpoint=self.__endpoint)
 
     @property
     def outgoing(self):
-        parts_list = POINTER(IPartsList)
-        self.EnumPartsOutgoing(ctypes.byref(parts_list))
-        return parts_list(device=self.__device, endpoint=self.__endpoint)
+        # noinspection PyUnresolvedReferences
+        parts_list = self.EnumPartsOutgoing()
+        if parts_list:
+            return parts_list(device=self.__device, endpoint=self.__endpoint)
 
     def activate(self, cls):
         try:
+            # noinspection PyUnresolvedReferences
             return ctypes.cast(
                 self.Activate(
                     comtypes.CLSCTX_INPROC_SERVER,
@@ -1337,6 +1097,7 @@ class IPart(comtypes.IUnknown):
         if endpoint is not None:
             for interface in self:
                 change_notify = IControlChangeNotify(endpoint, interface)
+                # noinspection PyUnresolvedReferences,PyProtectedMember
                 self.RegisterControlChangeCallback(interface._iid_, change_notify)
                 self.__interface_callbacks.append(change_notify)
 
@@ -1344,9 +1105,11 @@ class IPart(comtypes.IUnknown):
 
     def __del__(self):
         while self.__interface_callbacks:
+            # noinspection PyUnresolvedReferences
             self.UnregisterControlChangeCallback(self.__interface_callbacks.pop(0))
 
 
+# noinspection PyTypeChecker
 PIPart = POINTER(IPart)
 
 
@@ -1432,6 +1195,7 @@ class IDeviceTopology(comtypes.IUnknown):
 
     @property
     def device_id(self):
+        # noinspection PyUnresolvedReferences
         data = self.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -1440,10 +1204,13 @@ class IDeviceTopology(comtypes.IUnknown):
     @property
     def connectors(self):
         res = []
+        # noinspection PyUnresolvedReferences
         pCount = self.GetConnectorCount()
 
         for i in range(pCount):
+            # noinspection PyTypeChecker
             connector = POINTER(IConnector)()
+            # noinspection PyUnresolvedReferences
             self.GetConnector(i, ctypes.byref(connector))
             res.append(connector(device=self.__device, endpoint=self.__endpoint))
 
@@ -1452,10 +1219,13 @@ class IDeviceTopology(comtypes.IUnknown):
     @property
     def subunits(self):
         res = []
+        # noinspection PyUnresolvedReferences
         pCount = self.GetSubunitCount()
 
         for i in range(pCount):
+            # noinspection PyTypeChecker
             subunit = POINTER(ISubunit)()
+            # noinspection PyUnresolvedReferences
             self.GetSubunit(i, ctypes.byref(subunit))
             res.append(subunit(device=self.__device, endpoint=self.__endpoint))
 
@@ -1467,6 +1237,7 @@ class IDeviceTopology(comtypes.IUnknown):
         del self.__connectors[:]
 
 
+# noinspection PyTypeChecker
 PIDeviceTopology = POINTER(IDeviceTopology)
 
 
@@ -1491,15 +1262,18 @@ class IKsFormatSupport(InterfaceBase):
     )
 
     def is_format_supported(self, pKsFormat):
+        # noinspection PyUnresolvedReferences
         return bool(
             self.IsFormatSupported(ctypes.byref(pKsFormat), DWORD(ctypes.sizeof(pKsFormat)))
         )
 
     @property
     def prefered_format(self):
+        # noinspection PyUnresolvedReferences
         return self.GetDevicePreferredFormat()
 
 
+# noinspection PyTypeChecker
 PIKsFormatSupport = POINTER(IKsFormatSupport)
 
 
@@ -1523,12 +1297,15 @@ class IKsJackDescription(InterfaceBase):
     )
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetJackCount()
 
         for i in range(count):
+            # noinspection PyUnresolvedReferences
             yield self.GetJackDescription(i)
 
 
+# noinspection PyTypeChecker
 PIKsJackDescription = POINTER(IKsJackDescription)
 
 
@@ -1552,12 +1329,15 @@ class IKsJackDescription2(comtypes.IUnknown):
     )
 
     def __iter__(self):
+        # noinspection PyUnresolvedReferences
         count = self.GetJackCount()
 
         for i in range(count):
+            # noinspection PyUnresolvedReferences
             yield self.GetJackDescription2(i)
 
 
+# noinspection PyTypeChecker
 PIKsJackDescription2 = POINTER(IKsJackDescription2)
 
 
@@ -1575,9 +1355,11 @@ class IKsJackSinkInformation(comtypes.IUnknown):
 
     @property
     def jack_sink_information(self):
+        # noinspection PyUnresolvedReferences
         return self.GetJackSinkInformation()
 
 
+# noinspection PyTypeChecker
 PIKsJackSinkInformation = POINTER(IKsJackSinkInformation)
 
 
@@ -1600,6 +1382,7 @@ class _IControlChangeNotify(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIControlChangeNotify = POINTER(_IControlChangeNotify)
 
 
@@ -1686,13 +1469,13 @@ IPart._methods_ = (
         [],
         HRESULT,
         'EnumPartsIncoming',
-        (['in'], POINTER(PIPartsList), 'ppParts')
+        (['out'], POINTER(PIPartsList), 'ppParts')
     ),
     COMMETHOD(
         [],
         HRESULT,
         'EnumPartsOutgoing',
-        (['in'], POINTER(PIPartsList), 'ppParts')
+        (['out'], POINTER(PIPartsList), 'ppParts')
     ),
     COMMETHOD(
         [],

@@ -19,28 +19,64 @@
 from .data_types import *
 import ctypes
 import comtypes
-from .iid import (
+from .audiosessiontypes import AUDIO_STREAM_CATEGORY
+from .mmdeviceapi import (
     IID_IActivateAudioInterfaceAsyncOperation,
     IID_IActivateAudioInterfaceCompletionHandler,
-    IID_IAudioCaptureClient,
-    IID_IAudioClient,
-    IID_IAudioClient2,
-    IID_IAudioClient3,
-    IID_IAudioClock,
-    IID_IAudioClock2,
-    IID_IAudioClockAdjustment,
-    IID_IAudioRenderClient,
-    IID_IAudioStreamVolume,
-    IID_IChannelAudioVolume,
-    IID_ISimpleAudioVolume,
-)
-from .enum_constants import (
-    AUDIO_STREAM_CATEGORY,
-    AUDCLNT_STREAMOPTIONS
 )
 
 
-PIUnknown = POINTER(comtypes.IUnknown)
+IID_IAudioCaptureClient = IID(
+    '{C8ADBD64-E71E-48a0-A4DE-185C395CD317}'
+)
+IID_IAudioClient3 = IID(
+    '{7ED4EE07-8E67-4CD4-8C1A-2B7A5987AD42}'
+)
+IID_IAudioClock = IID(
+    '{CD63314F-3FBA-4a1b-812C-EF96358728E7}'
+)
+IID_IAudioClock2 = IID(
+    '{6f49ff73-6727-49ac-a008-d98cf5e70048}'
+)
+IID_IAudioClockAdjustment = IID(
+    '{f6e4c0a0-46d9-4fb8-be21-57a3ef2b626c}'
+)
+IID_IAudioClient = IID(
+    '{1cb9ad4c-dbfa-4c32-b178-c2f568a703b2}'
+)
+IID_IAudioClient2 = IID(
+    '{726778CD-F60A-4eda-82DE-E47610CD78AA}'
+)
+IID_IAudioRenderClient = IID(
+    '{F294ACFC-3146-4483-A7BF-ADDCA7C260E2}'
+)
+IID_IAudioStreamVolume = IID(
+    '{93014887-242D-4068-8A15-CF5E93B90FE3}'
+)
+IID_IChannelAudioVolume = IID(
+    '{1C158861-B533-4B30-B1CF-E853E51C59B8}'
+)
+IID_ISimpleAudioVolume = IID(
+    '{87CE5498-68D6-44E5-9215-6DA47EF883D8}'
+)
+
+
+class AUDCLNT_BUFFERFLAGS(ENUM):
+    AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY = 0x1
+    AUDCLNT_BUFFERFLAGS_SILENT = 0x2
+    AUDCLNT_BUFFERFLAGS_TIMESTAMP_ERROR = 0x4
+
+
+PAUDCLNT_BUFFERFLAGS = POINTER(AUDCLNT_BUFFERFLAGS)
+
+
+class AUDCLNT_STREAMOPTIONS(ENUM):
+    AUDCLNT_STREAMOPTIONS_NONE = 0
+    AUDCLNT_STREAMOPTIONS_RAW = 0x1
+    AUDCLNT_STREAMOPTIONS_MATCH_FORMAT = 0x2
+
+
+PAUDCLNT_STREAMOPTIONS = POINTER(AUDCLNT_STREAMOPTIONS)
 
 
 class WAVEFORMATEX(ctypes.Structure):
@@ -84,6 +120,7 @@ class IActivateAudioInterfaceAsyncOperation(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIActivateAudioInterfaceAsyncOperation = POINTER(
     IActivateAudioInterfaceAsyncOperation
 )
@@ -106,6 +143,7 @@ class IActivateAudioInterfaceCompletionHandler(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIActivateAudioInterfaceCompletionHandler = POINTER(
     IActivateAudioInterfaceCompletionHandler
 )
@@ -140,6 +178,7 @@ class IAudioCaptureClient(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioCaptureClient = POINTER(IAudioCaptureClient)
 
 
@@ -217,6 +256,7 @@ class IAudioClient(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioClient = POINTER(IAudioClient)
 
 
@@ -249,6 +289,7 @@ class IAudioClient2(IAudioClient):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioClient2 = POINTER(IAudioClient2)
 
 
@@ -285,6 +326,7 @@ class IAudioClient3(IAudioClient):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioClient3 = POINTER(IAudioClient3)
 
 
@@ -314,6 +356,7 @@ class IAudioClock(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioClock = POINTER(IAudioClock)
 
 
@@ -331,6 +374,7 @@ class IAudioClock2(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioClock2 = POINTER(IAudioClock2)
 
 
@@ -346,6 +390,7 @@ class IAudioClockAdjustment(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioClockAdjustment = POINTER(IAudioClockAdjustment)
 
 
@@ -370,10 +415,12 @@ class IAudioRenderClient(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioRenderClient = POINTER(IAudioRenderClient)
 
 
 class ISimpleAudioVolume(comtypes.IUnknown):
+    """Volume control for an audio session"""
     _case_insensitive_ = False
     _iid_ = IID_ISimpleAudioVolume
     _methods_ = (
@@ -405,25 +452,66 @@ class ISimpleAudioVolume(comtypes.IUnknown):
         )
     )
 
+    def __str__(self):
+        return str(self.level)
+
+    def __float__(self):
+        return self.level
+
+    def __int__(self):
+        return int(self.level)
+
+    def __init__(self):
+        self.__session = None
+        self.__channel_volumes = []
+        comtypes.IUnknown.__init__(self)
+
+    def __call__(self, session):
+        self.__session = session
+
+        channel_audio_volume = session.QueryInterface(IChannelAudioVolume)
+        for vol in channel_audio_volume:
+            self.__channel_volumes.append(vol)
+
+        return self
+
     @property
-    def master(self):
+    def level(self) -> float:
+        """
+        Get/Set the volume level for a session
+        """
+        # noinspection PyUnresolvedReferences
         vol = self.GetMasterVolume()
-        return vol
+        return vol * 100.0
 
-    @master.setter
-    def master(self, value):
-        self.SetMasterVolume(FLOAT(value))
+    @level.setter
+    def level(self, value: float):
+        # noinspection PyUnresolvedReferences
+        self.SetMasterVolume(FLOAT(value / 100.0), NULL)
 
     @property
-    def mute(self):
+    def mute(self) -> bool:
+        """
+        Get/Set mute for the session
+        """
+        # noinspection PyUnresolvedReferences
         mute = self.GetMute()
-        return mute
+        return bool(mute)
 
     @mute.setter
-    def mute(self, value):
-        self.SetMute(BOOL(value))
+    def mute(self, value: bool):
+        # noinspection PyUnresolvedReferences
+        self.SetMute(BOOL(value), NULL)
+
+    def __iter__(self):
+        """
+        Channel Volumes
+        """
+        for vol in self.__channel_volumes:
+            yield vol
 
 
+# noinspection PyTypeChecker
 PISimpleAudioVolume = POINTER(ISimpleAudioVolume)
 
 
@@ -468,7 +556,36 @@ class IAudioStreamVolume(comtypes.IUnknown):
     )
 
 
+# noinspection PyTypeChecker
 PIAudioStreamVolume = POINTER(IAudioStreamVolume)
+
+
+class ChannelAudioVolume(object):
+    """
+    Audio session channel volume
+    """
+
+    def __init__(self, channel_number, channel_audio_volume):
+        self.__channel_number = channel_number
+        self.__channel_audio_volume = channel_audio_volume
+
+    @property
+    def channel_number(self) -> int:
+        """
+        Channel number
+        """
+        return self.__channel_number
+
+    @property
+    def level(self) -> float:
+        """
+        Get/Set the channel volume for a session
+        """
+        return self.__channel_audio_volume.GetChannelVolume(self.__channel_number) * 100.0
+
+    @level.setter
+    def level(self, value: float):
+        self.__channel_audio_volume.SetChannelVolume(self.__channel_number, FLOAT(value / 100.0))
 
 
 class IChannelAudioVolume(comtypes.IUnknown):
@@ -511,5 +628,11 @@ class IChannelAudioVolume(comtypes.IUnknown):
         ),
     )
 
+    def __iter__(self):
+        # noinspection PyUnresolvedReferences
+        for i in range(self.GetChannelCount()):
+            yield ChannelAudioVolume(i, self)
 
+
+# noinspection PyTypeChecker
 PIChannelAudioVolume = POINTER(IChannelAudioVolume)

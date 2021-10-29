@@ -22,8 +22,11 @@ __description__ = 'Python bindings to Microsoft Windows® Core Audio'
 __url__ = 'https://github.com/kdschlosser/pyWinCoreAudio'
 
 
+try:
+    import comtypes as _comtypes
+except ImportError:
+    pass
 
-import comtypes as _comtypes
 import weakref as _weakref
 
 from .signal import (

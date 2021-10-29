@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of EventGhost.
-# Copyright © 2005-2016 EventGhost Project <http://www.eventghost.net/>
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
 #
 # EventGhost is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
-
 
 import ctypes
 import comtypes
@@ -51,8 +50,12 @@ class GUID(comtypes.GUID):
 
         elif len(guid) == 1:
             guid = guid[0]
-            if not guid.startswith('{'):
-                guid = '{' + guid + '}'
+            try:
+                if not guid.startswith('{'):
+                    guid = '{' + guid + '}'
+            except AttributeError:
+                pass
+
         else:
             l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8 = guid
 
@@ -208,6 +211,7 @@ class _tagPROPERTYKEY(ctypes.Structure):
 
 
 PROPERTYKEY = _tagPROPERTYKEY
+PPROPERTYKEY = POINTER(PROPERTYKEY)
 
 
 def DEFINE_PROPERTYKEY(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8, key):

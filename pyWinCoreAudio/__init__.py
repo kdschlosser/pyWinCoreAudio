@@ -1,3 +1,28 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of EventGhost.
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
+#
+# EventGhost is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 2 of the License, or (at your option)
+# any later version.
+#
+# EventGhost is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with EventGhost. If not, see <http://www.gnu.org/licenses/>.
+
+__version__ = '0.1.0a'
+__author__ = 'Kevin G. Schlosser'
+__description__ = 'Python bindings to Microsoft Windows® Core Audio'
+__url__ = 'https://github.com/kdschlosser/pyWinCoreAudio'
+
+
+
 import comtypes as _comtypes
 import weakref as _weakref
 
@@ -43,7 +68,7 @@ def devices(message=True):
             'to the object that is returned.\n\n'
             'The above is really important so that the\n'
             'library can function properly and no errors\n'
-            'will take place.'
+            'will take place.\n'
             '***********************************************\n'
         )
 

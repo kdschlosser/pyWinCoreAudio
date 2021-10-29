@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of EventGhost.
-# Copyright © 2005-2016 EventGhost Project <http://www.eventghost.net/>
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
 #
 # EventGhost is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -16,19 +16,13 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-import comtypes
-
+import threading
 from .data_types import *  # NOQA
 import ctypes  # NOQA
 import comtypes  # NOQA
 from comtypes import CoClass  # NOQA
 from . import utils  # NOQA
-from .policyconfig import IPolicyConfigVista  # NOQA
-from .audioclient import IAudioClient  # NOQA
-from .audiopolicy import (
-    IAudioSessionManager,
-    IAudioSessionManager2,
-)  # NOQA
+
 from .endpointvolumeapi import (
     IAudioEndpointVolumeEx,
     IAudioEndpointVolume
@@ -46,24 +40,7 @@ from .ksmedia import (
     EPcxConnectionType,
     KSJACK_SINK_INFORMATION
 )  # NOQA
-from .devicetopologyapi import (
-    IDeviceTopology,
-    IAudioInputSelector,
-    IKsJackDescription,
-    IKsJackDescription2,
-    IKsJackSinkInformation,
-    IAudioAutoGainControl,
-    IAudioBass,
-    IAudioChannelConfig,
-    IAudioLoudness,
-    IAudioMidrange,
-    IAudioOutputSelector,
-    IAudioTreble,
-    IConnector,
-    ISubunit,
-    PartType,
-    ConnectorType
-)  # NOQA
+
 from .propertystore import (
     PROPERTYKEY,
     PIPropertyStore,
@@ -75,7 +52,6 @@ from .constant import (
     STGM_WRITE,
 )  # NOQA
 from .ksmedia import KSNODETYPE  # NOQA
-from .policyconfig import CLSID_PolicyConfigVistaClient  # NOQA
 from .functiondiscoverykeys_devpkey import (
     PKEY_DeviceInterface_FriendlyName,
     PKEY_Device_FriendlyName,
@@ -160,8 +136,6 @@ class DataFlow(ENUM):
 
 PDataFlow = POINTER(DataFlow)
 
-_CoTaskMemFree = ctypes.windll.ole32.CoTaskMemFree
-
 
 DEVICE_STATE_ACTIVE = 0x00000001
 DEVICE_STATE_DISABLED = 0x00000002
@@ -171,6 +145,34 @@ DEVICE_STATE_MASK_ALL = 0x0000000F
 
 ENDPOINT_SYSFX_ENABLED = 0x00000000
 ENDPOINT_SYSFX_DISABLED = 0x00000001
+
+
+from .policyconfig import (
+    CLSID_PolicyConfigVistaClient,
+    IPolicyConfigVista
+)  # NOQA
+from .audioclient import IAudioClient  # NOQA
+from .devicetopologyapi import (
+    IDeviceTopology,
+    IAudioInputSelector,
+    IKsJackDescription,
+    IKsJackDescription2,
+    IKsJackSinkInformation,
+    IAudioAutoGainControl,
+    IAudioBass,
+    IAudioChannelConfig,
+    IAudioLoudness,
+    IAudioMidrange,
+    IAudioOutputSelector,
+    IAudioTreble,
+    IConnector,
+    ISubunit,
+    PartType,
+    ConnectorType
+)  # NOQA
+
+
+_CoTaskMemFree = ctypes.windll.ole32.CoTaskMemFree
 
 
 class _IMMNotificationClient(comtypes.IUnknown):
@@ -223,9 +225,12 @@ class IMMNotificationClient(comtypes.COMObject):
 
     def __init__(self, device_enum):
         self.__device_enum = device_enum
+        self.__last_default_endpoint = []
         comtypes.COMObject.__init__(self)
 
     def OnDeviceStateChanged(self, pwstrDeviceId, dwNewState):
+        print('OnDeviceStateChanged')
+
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
         if dwNewState == DEVICE_STATE_UNPLUGGED:
@@ -256,6 +261,8 @@ class IMMNotificationClient(comtypes.COMObject):
         return S_OK
 
     def OnDeviceAdded(self, pwstrDeviceId):
+        print('OnDeviceAdded')
+
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
         for device in self.__device_enum:
             if device.id == pwstrDeviceId:
@@ -265,6 +272,8 @@ class IMMNotificationClient(comtypes.COMObject):
         return S_OK
 
     def OnDeviceRemoved(self, pwstrDeviceId):
+        print('OnDeviceRemoved')
+
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
         name = self.__device_enum.get_device_name(pwstrDeviceId)
@@ -275,25 +284,50 @@ class IMMNotificationClient(comtypes.COMObject):
         ON_DEVICE_REMOVED.signal(name=name)
         return S_OK
 
-    def OnDefaultDeviceChanged(self, flow, role, _):
-        flow = EDataFlow.get(flow)
-        role = ERole.get(role)
-        endpoint = self.__device_enum.default_audio_endpoint(role, flow)
+    def OnDefaultDeviceChanged(self, flow, role, pwstrDefaultDeviceId):
+        pwstrDefaultDeviceId = utils.convert_to_string(pwstrDefaultDeviceId)
 
-        ON_ENDPOINT_DEFAULT_CHANGED.signal(endpoint.device, endpoint=endpoint)
+        flow = EDataFlow.get(flow.value)
+        role = ERole.get(role.value)
+
+        def do(id_, f, r):
+            for device in self.__device_enum:
+                for endpoint in device:
+                    if endpoint.id == id_:
+                        break
+                else:
+                    continue
+
+                break
+            else:
+                return
+
+            endpt = (flow, role)
+            if endpt != endpoint:
+                ON_ENDPOINT_DEFAULT_CHANGED.signal(device=device, endpoint=endpoint, role=r, flow=f)
+
+        if (pwstrDefaultDeviceId, flow, role) not in self.__last_default_endpoint:
+            self.__last_default_endpoint.append((pwstrDefaultDeviceId, flow, role))
+            while len(self.__last_default_endpoint) > 3:
+                self.__last_default_endpoint.pop(0)
+
+            utils.run_in_thread(do, pwstrDefaultDeviceId, flow, role)
+
         return S_OK
 
     def OnPropertyValueChanged(self, pwstrDeviceId, key):
+        print('OnPropertyValueChanged')
+
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
         for device in self.__device_enum:
             if device.id == pwstrDeviceId:
-                ON_DEVICE_PROPERTY_CHANGED.signal(device, key=key)
+                ON_DEVICE_PROPERTY_CHANGED.signal(device=device, key=key)
                 break
 
             for endpoint in device:
                 if endpoint.id == pwstrDeviceId:
-                    ON_DEVICE_PROPERTY_CHANGED.signal(device, endpoint=endpoint, key=key)
+                    ON_DEVICE_PROPERTY_CHANGED.signal(device=device, endpoint=endpoint, key=key)
                     break
             else:
                 continue
@@ -992,6 +1026,11 @@ class IMMDevice(comtypes.IUnknown):
 # noinspection PyTypeChecker
 PIMMDevice = POINTER(IMMDevice)
 
+from .audiopolicy import (
+    IAudioSessionManager,
+    IAudioSessionManager2,
+)  # NOQA
+
 
 class IMMDeviceActivator(comtypes.IUnknown):
     _iid_ = IID_IMMDeviceActivator
@@ -1065,7 +1104,7 @@ class _IMMDeviceEnumerator(comtypes.IUnknown):
             'GetDefaultAudioEndpoint',
             (['in'], EDataFlow, 'dataFlow'),
             (['in'], ERole, 'role'),
-            (['in'], POINTER(PIMMDevice), 'ppDevices')
+            (['out'], POINTER(PIMMDevice), 'ppDevices')
         ),
         COMMETHOD(
             [],
@@ -1129,44 +1168,38 @@ class IMMDeviceEnumerator(object):
 
     def __init__(self):
         if IMMDeviceEnumerator._instance is None:
+            IMMDeviceEnumerator._instance = self
 
-            self.__device_enum = comtypes.CoCreateInstance(
+            self._device_enum = comtypes.CoCreateInstance(
                 CLSID_MMDeviceEnumerator,
                 _IMMDeviceEnumerator,
                 comtypes.CLSCTX_ALL
             )
 
             self.__notification_client = IMMNotificationClient(self)
-            self.__device_enum.RegisterEndpointNotificationCallback(self.__notification_client)
+            self._device_enum.RegisterEndpointNotificationCallback(self.__notification_client)
 
         else:
             self.__dict__.update(IMMDeviceEnumerator._instance.__dict__)
 
     def __del__(self):
         if self.__notification_client is not None:
-            self.__device_enum.UnregisterEndpointNotificationCallback(self.__notification_client)
+            self._device_enum.UnregisterEndpointNotificationCallback(self.__notification_client)
             self.__notification_client = None
 
         IMMDeviceEnumerator._instance = None
 
     def __iter__(self):
-        for device in self.__device_enum:
+        for device in self._device_enum:
             yield device
 
     @classmethod
     def default_audio_endpoint(cls, data_flow, role):
         self = cls._instance
         # noinspection PyTypeChecker
-        endp = POINTER(IMMDevice)()
-
-        self.__device_enum.GetDefaultAudioEndpoint(
-            data_flow,
-            role,
-            ctypes.byref(endp)
-        )
+        endp = self._device_enum.GetDefaultAudioEndpoint(data_flow, role)
 
         id_ = endp.id
-
         for device in self:
             for endpoint in device:
                 if endpoint.id == id_:

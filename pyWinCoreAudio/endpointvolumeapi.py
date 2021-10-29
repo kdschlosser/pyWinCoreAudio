@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of EventGhost.
-# Copyright © 2005-2016 EventGhost Project <http://www.eventghost.net/>
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
 #
 # EventGhost is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -61,7 +61,7 @@ class AUDIO_VOLUME_NOTIFICATION_DATA(ctypes.Structure):
 
     @property
     def master_volume(self):
-        return self.fMasterVolume.value
+        return self.fMasterVolume * 100.0
 
     @property
     def num_channels(self):
@@ -69,7 +69,7 @@ class AUDIO_VOLUME_NOTIFICATION_DATA(ctypes.Structure):
 
     def __iter__(self):
         for i in range(self.num_channels):
-            yield self.afChannelVolumes[i].value
+            yield self.afChannelVolumes[i] * 100.0
 
 
 PAUDIO_VOLUME_NOTIFICATION_DATA = POINTER(AUDIO_VOLUME_NOTIFICATION_DATA)
@@ -100,7 +100,7 @@ class IAudioEndpointVolumeCallback(comtypes.COMObject):
         comtypes.COMObject.__init__(self)
 
     def OnNotify(self, pNotify):
-        pNotify = ctypes.cast(pNotify, PAUDIO_VOLUME_NOTIFICATION_DATA).contents
+        pNotify = pNotify.contents
         ON_ENDPOINT_VOLUME_CHANGED.signal(
             device=self.__endpoint.device,
             endpoint=self.__endpoint,

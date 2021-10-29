@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of EventGhost.
-# Copyright © 2005-2016 EventGhost Project <http://www.eventghost.net/>
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
 #
 # EventGhost is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-from .__core_audio.data_types import *
+from .data_types import *
 import threading
 import ctypes
 import comtypes
@@ -97,7 +97,6 @@ def get_icon(icon):
             icn += item
 
         icon = icn
-
 
     if icon in icons:
         return icons[icon]

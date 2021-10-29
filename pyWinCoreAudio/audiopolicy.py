@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of EventGhost.
-# Copyright © 2005-2016 EventGhost Project <http://www.eventghost.net/>
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
 #
 # EventGhost is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -144,77 +144,105 @@ PIAudioSessionEvents = POINTER(_IAudioSessionEvents)
 class IAudioSessionEvents(comtypes.COMObject):
     _com_interfaces_ = [_IAudioSessionEvents]
 
-    def __init__(self, session):
+    def __init__(self, session, endpoint):
         self.__session = session
+        self.__endpoint = endpoint
+        self.__session_name = session.name
+        self.__session_icon = session.icon_path
+        self.__last_volume_notification = (None, None)
         comtypes.COMObject.__init__(self)
 
     def OnDisplayNameChanged(self, NewDisplayName, _):
+        print('OnDisplayNameChanged')
+
         NewDisplayName = utils.convert_to_string(NewDisplayName)
 
         ON_SESSION_NAME_CHANGED.signal(
-            self.__session.endpoint.device,
-            self.__session.endpoint,
-            self.__session,
+            device=self.__endpoint.device,
+            endpoint=self.__endpoint,
+            session=self.__session,
+            old_name=self.__session_name,
             new_name=NewDisplayName
         )
+
+        self.__session_name = NewDisplayName
+
         return S_OK
 
     def OnIconPathChanged(self, NewIconPath, _):
+        print('OnIconPathChanged')
+
         NewIconPath = utils.convert_to_string(NewIconPath)
         ON_SESSION_ICON_CHANGED.signal(
-            self.__session.endpoint.device,
-            self.__session.endpoint,
-            self.__session,
+            device=self.__endpoint.device,
+            endpoint=self.__endpoint,
+            session=self.__session,
+            old_icon=self.__session_icon,
             new_icon=NewIconPath
         )
+
+        self.__session_icon = NewIconPath
         return S_OK
 
     def OnSimpleVolumeChanged(self, NewVolume, NewMute, _):
-        ON_SESSION_VOLUME_CHANGED.signal(
-            self.__session.endpoint.device,
-            self.__session.endpoint,
-            self.__session,
-            new_volume=NewVolume,
-            new_mute=NewMute
-        )
+        print('OnSimpleVolumeChanged')
+
+        if (NewVolume, NewMute) != self.__last_volume_notification:
+            self.__last_volume_notification = (NewVolume, NewMute)
+            ON_SESSION_VOLUME_CHANGED.signal(
+                device=self.__endpoint.device,
+                endpoint=self.__endpoint,
+                session=self.__session,
+                new_volume=NewVolume * 100.0,
+                new_mute=NewMute
+            )
         return S_OK
 
     def OnChannelVolumeChanged(self, _, NewChannelVolumeArray, ChangedChannel, __):
+        print('OnChannelVolumeChanged')
+
         vol = NewChannelVolumeArray[ChangedChannel]
         ON_SESSION_CHANNEL_VOLUME_CHANGED.signal(
-            self.__session.endpoint.device,
-            self.__session.endpoint,
-            self.__session,
+            device=self.__endpoint.device,
+            endpoint=self.__endpoint,
+            session=self.__session,
             channel=ChangedChannel,
-            new_volume=vol
+            new_volume=vol * 100.0
         )
         return S_OK
 
     def OnGroupingParamChanged(self, NewGroupingParam, _):
+        print('OnGroupingParamChanged')
+
         ON_SESSION_GROUPING_CHANGED.signal(
-            self.__session.endpoint.device,
-            self.__session.endpoint,
-            self.__session,
+            device=self.__endpoint.device,
+            endpoint=self.__endpoint,
+            session=self.__session,
             new_grouping_param=NewGroupingParam.contents
         )
         return S_OK
 
     def OnStateChanged(self, NewState, _):
+        print('OnStateChanged')
+
+
         NewState = AudioSessionState.get(NewState)
         ON_SESSION_STATE_CHANGED.signal(
-            self.__session.endpoint.device,
-            self.__session.endpoint,
-            self.__session,
+            device=self.__endpoint.device,
+            endpoint=self.__endpoint,
+            session=self.__session,
             new_state=NewState
         )
         return S_OK
 
     def OnSessionDisconnected(self, DisconnectReason, _):
+        print('OnSessionDisconnected')
+
         DisconnectReason = AudioSessionDisconnectReason.get(DisconnectReason)
         ON_SESSION_DISCONNECT.signal(
-            self.__session.endpoint.device,
-            self.__session.endpoint,
-            self.__session,
+            device=self.__endpoint.device,
+            endpoint=self.__endpoint,
+            name=self.__session_name,
             reason=DisconnectReason
         )
         session_manager = self.__session.session_manager()
@@ -295,9 +323,11 @@ class IAudioSessionControl(comtypes.IUnknown):
     def __call__(self, endpoint, session_manager):
         self.__endpoint = endpoint
         self.__session_manager = session_manager
-        self.__session_events = IAudioSessionEvents(self)
-        # noinspection PyUnresolvedReferences
-        self.RegisterAudioSessionNotification(self.__session_events)
+
+        if self.__session_events is None:
+            self.__session_events = IAudioSessionEvents(self, endpoint)
+            # noinspection PyUnresolvedReferences
+            self.RegisterAudioSessionNotification(self.__session_events)
         return self
 
     def __del__(self):
@@ -351,6 +381,18 @@ class IAudioSessionControl(comtypes.IUnknown):
 
         if name == r'@%SystemRoot%\System32\AudioSrv.Dll,-202':
             name = 'System Sounds'
+
+        name = name.strip()
+
+        if not name:
+            try:
+                id_ = self.id
+            except AttributeError:
+                pass
+            else:
+                id_ = id_.rsplit('%b', 1)[0]
+                id_ = id_.rsplit('\\', 1)[-1]
+                name = id_.split('.', 1)[0]
 
         return name
 
@@ -430,6 +472,8 @@ class IAudioSessionNotification(comtypes.COMObject):
         comtypes.COMObject.__init__(self)
 
     def OnSessionCreated(self, NewSession):
+        print('OnSessionCreated')
+
         session_manager = self.__endpoint.session_manager
 
         name = utils.convert_to_string(NewSession.GetDisplayName())
@@ -440,7 +484,11 @@ class IAudioSessionNotification(comtypes.COMObject):
         else:
             return S_OK
 
-        ON_SESSION_CREATED.signal(self.__endpoint.device, self.__endpoint, session)
+        ON_SESSION_CREATED.signal(
+            device=self.__endpoint.device,
+            endpoint=self.__endpoint,
+            session=session
+        )
         return S_OK
 
 
@@ -662,9 +710,9 @@ class IAudioVolumeDuckNotification(comtypes.COMObject):
 
     def OnVolumeDuckNotification(self, _, countCommunicationSessions):
         ON_SESSION_VOLUME_DUCK.signal(
-            self._session.endpoint.device,
-            self._session.endpoint,
-            self._session,
+            device=self._session.endpoint.device,
+            endpoint=self._session.endpoint,
+            session=self._session,
             count_communication_sessions=countCommunicationSessions
         )
 
@@ -672,9 +720,9 @@ class IAudioVolumeDuckNotification(comtypes.COMObject):
 
     def OnVolumeUnduckNotification(self, _):
         ON_SESSION_VOLUME_UNDUCK.signal(
-            self._session.endpoint.device,
-            self._session.endpoint,
-            self._session
+            device=self._session.endpoint.device,
+            endpoint=self._session.endpoint,
+            session=self._session
         )
         return S_OK
 

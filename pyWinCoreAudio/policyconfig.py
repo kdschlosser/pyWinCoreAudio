@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of EventGhost.
-# Copyright © 2005-2016 EventGhost Project <http://www.eventghost.net/>
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
 #
 # EventGhost is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -19,10 +19,8 @@
 from .data_types import *
 import ctypes
 import comtypes
-from .mmdeviceapi import ERole
 from .audioclient import PWAVEFORMATEX
 from .propertystore import (
-    PPROPERTYKEY,
     PPROPVARIANT
 )
 
@@ -42,6 +40,9 @@ CLSID_PolicyConfigClient = IID(
 CLSID_PolicyConfigVistaClient = IID(
     '{294935CE-F637-4E7C-A41B-AB255460B862}'
 )
+
+
+from .mmdeviceapi import ERole  # NOQA
 
 
 class DeviceSharedMode(ctypes.Structure):

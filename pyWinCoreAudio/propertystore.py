@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of EventGhost.
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
+#
+# EventGhost is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 2 of the License, or (at your option)
+# any later version.
+#
+# EventGhost is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
 from .data_types import *
 import ctypes
@@ -440,10 +457,6 @@ class _IPropertyStore(IUnknown):
     _idlflags_ = []
 
 
-class _tagpropertykey(ctypes.Structure):
-    pass
-
-
 _IPropertyStore._methods_ = [
     COMMETHOD(
         [],
@@ -456,20 +469,20 @@ _IPropertyStore._methods_ = [
         HRESULT,
         'GetAt',
         (['in'], ULONG, 'iProp'),
-        (['out'], POINTER(_tagpropertykey), 'pkey')
+        (['out'], POINTER(PROPERTYKEY), 'pkey')
     ),
     COMMETHOD(
         [],
         HRESULT,
         'GetValue',
-        (['in'], POINTER(_tagpropertykey), 'key'),
+        (['in'], POINTER(PROPERTYKEY), 'key'),
         (['out'], POINTER(tag_inner_PROPVARIANT), 'pv')
     ),
     COMMETHOD(
         [],
         HRESULT,
         'SetValue',
-        (['in'], POINTER(_tagpropertykey), 'key'),
+        (['in'], POINTER(PROPERTYKEY), 'key'),
         (['in'], POINTER(tag_inner_PROPVARIANT), 'propvar')
     ),
     COMMETHOD(
@@ -483,10 +496,6 @@ _IPropertyStore._methods_ = [
 tagVersionedStream._fields_ = [
     ('guidVersion', GUID),
     ('pStream', POINTER(IStream)),
-]
-_tagpropertykey._fields_ = [
-    ('fmtid', GUID),
-    ('pid', ULONG),
 ]
 
 
@@ -886,9 +895,6 @@ IStorage._methods_ = [
 
 PROPVARIANT = tag_inner_PROPVARIANT
 PPROPVARIANT = POINTER(PROPVARIANT)
-
-PROPERTYKEY = _tagpropertykey
-PPROPERTYKEY = POINTER(_tagpropertykey)
 
 
 class IPropertyStore(_IPropertyStore):

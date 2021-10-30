@@ -1275,6 +1275,7 @@ KSAUDIO_SPEAKER_SUPER_WOOFER = SPEAKER_LOW_FREQUENCY
 
 
 class AudioSpeakers(object):
+    _methods_ = ()
 
     def __init__(self, value):
         if value is None:
@@ -1298,6 +1299,48 @@ class AudioSpeakers(object):
         self.high_back_center = value | SPEAKER_TOP_BACK_CENTER == value
         self.high_back_right = value | SPEAKER_TOP_BACK_RIGHT == value
         self.subwoofer = value | SPEAKER_LOW_FREQUENCY == value
+        
+    def __int__(self):
+        value = 0
+        
+        if self.front_left:
+            value |= SPEAKER_FRONT_LEFT
+        if self.front_left_of_center:
+            value |= SPEAKER_FRONT_LEFT_OF_CENTER
+        if self.front_center:
+            value |= SPEAKER_FRONT_CENTER
+        if self.front_right_of_center:
+            value |= SPEAKER_FRONT_RIGHT_OF_CENTER
+        if self.front_right:
+            value |= SPEAKER_FRONT_RIGHT
+        if self.side_left:
+            value |= SPEAKER_SIDE_LEFT
+        if self.side_right:
+            value |= SPEAKER_SIDE_RIGHT
+        if self.back_left:
+            value |= SPEAKER_BACK_LEFT
+        if self.back_center:
+            value |= SPEAKER_BACK_CENTER
+        if self.back_right:
+            value |= SPEAKER_BACK_RIGHT
+        if self.high_center:
+            value |= SPEAKER_TOP_CENTER
+        if self.high_front_left:
+            value |= SPEAKER_TOP_FRONT_LEFT
+        if self.high_front_center:
+            value |= SPEAKER_TOP_FRONT_CENTER
+        if self.high_front_right:
+            value |= SPEAKER_TOP_FRONT_RIGHT
+        if self.high_back_left:
+            value |= SPEAKER_TOP_BACK_LEFT
+        if self.high_back_center:
+            value |= SPEAKER_TOP_BACK_CENTER
+        if self.high_back_right:
+            value |= SPEAKER_TOP_BACK_RIGHT
+        if self.subwoofer:
+            value |= SPEAKER_LOW_FREQUENCY
+
+        return value
 
     def __str__(self):
         eye_level = sum([

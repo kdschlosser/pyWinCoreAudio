@@ -16,17 +16,16 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-import threading
-from .data_types import *  # NOQA
-import ctypes  # NOQA
-import comtypes  # NOQA
-from comtypes import CoClass  # NOQA
-from . import utils  # NOQA
-
+from .data_types import *
+import ctypes
+import comtypes
+from comtypes import CoClass
+from . import utils
+from .ksproxy import IKsControl
 from .endpointvolumeapi import (
     IAudioEndpointVolumeEx,
     IAudioEndpointVolume
-)  # NOQA
+)
 from .signal import (
     tw,
     ON_DEVICE_STATE_CHANGED,
@@ -34,25 +33,28 @@ from .signal import (
     ON_DEVICE_REMOVED,
     ON_ENDPOINT_DEFAULT_CHANGED,
     ON_DEVICE_PROPERTY_CHANGED
-)  # NOQA
-from .ksmedia import (
-    AudioSpeakers,
-    JackDescription,
-    EPcxConnectionType,
-    KSJACK_SINK_INFORMATION
-)  # NOQA
-
+)
+from .ks import (
+    KSPROPERTY_TYPE_GET,
+    KSPROPERTY_TYPE_SET,
+    KSPROPERTY_TYPE_TOPOLOGY,
+)
+from .dsound import (
+    DS3DALG_DEFAULT,
+    DS3DALG_NO_VIRTUALIZATION,
+    DS3DALG_HRTF_FULL,
+    DS3DALG_HRTF_LIGHT
+)
 from .propertystore import (
     PROPERTYKEY,
     PIPropertyStore,
     PPROPVARIANT
-)  # NOQA
+)
 from .constant import (
     S_OK,
     STGM_READ,
     STGM_WRITE,
-)  # NOQA
-from .ksmedia import KSNODETYPE  # NOQA
+)
 from .functiondiscoverykeys_devpkey import (
     PKEY_DeviceInterface_FriendlyName,
     PKEY_Device_FriendlyName,
@@ -63,7 +65,63 @@ from .functiondiscoverykeys_devpkey import (
     PKEY_AudioEndpoint_GUID,
     PKEY_AudioEndpoint_PhysicalSpeakers,
     PKEY_AudioEndpoint_Disable_SysFx
-)  # NOQA
+)
+from .ksmedia import (
+    KSNODEPROPERTY_AUDIO_CHANNEL,
+    KSNODEPROPERTY,
+    AudioSpeakers,
+    KSPROPERTY_AEC_MODE,
+    KSPROPSETID_Acoustic_Echo_Cancel,
+    KSNODETYPE_ACOUSTIC_ECHO_CANCEL,
+    AEC_MODE_PASS_THROUGH,
+    AEC_MODE_HALF_DUPLEX,
+    AEC_MODE_FULL_DUPLEX,
+    KSPROPSETID_Audio,
+    PARTID_MASK,
+    KSNODETYPE_TONE,
+    KSNODETYPE_EQUALIZER,
+    KSNODETYPE_AGC,
+    # KSNODETYPE_NOISE_SUPPRESS,
+    KSNODETYPE_LOUDNESS,
+    # KSNODETYPE_PROLOGIC_DECODER,
+    KSNODETYPE_STEREO_WIDE,
+    KSNODETYPE_REVERB,
+    KSNODETYPE_CHORUS,
+    KSNODETYPE_3D_EFFECTS,
+    # KSNODETYPE_PARAMETRIC_EQUALIZER,
+    # KSNODETYPE_DYN_RANGE_COMPRESSOR,
+    # KSPROPERTY_AUDIO_DYNAMIC_RANGE,
+    KSPROPERTY_AUDIO_BASS,
+    KSPROPERTY_AUDIO_MID,
+    KSPROPERTY_AUDIO_TREBLE,
+    KSPROPERTY_AUDIO_BASS_BOOST,
+    KSPROPERTY_AUDIO_EQ_LEVEL,
+    KSPROPERTY_AUDIO_NUM_EQ_BANDS,
+    KSPROPERTY_AUDIO_EQ_BANDS,
+    KSPROPERTY_AUDIO_AGC,
+    KSPROPERTY_AUDIO_LOUDNESS,
+    KSPROPERTY_AUDIO_WIDENESS,
+    KSPROPERTY_AUDIO_REVERB_LEVEL,
+    KSPROPERTY_AUDIO_CHORUS_LEVEL,
+    # KSPROPERTY_AUDIO_SURROUND_ENCODE,
+    # KSPROPERTY_AUDIO_3D_INTERFACE,
+    # KSPROPERTY_AUDIO_PEQ_MAX_BANDS,
+    # KSPROPERTY_AUDIO_PEQ_NUM_BANDS,
+    # KSPROPERTY_AUDIO_PEQ_BAND_CENTER_FREQ,
+    # KSPROPERTY_AUDIO_PEQ_BAND_Q_FACTOR,
+    # KSPROPERTY_AUDIO_PEQ_BAND_LEVEL,
+    KSPROPERTY_AUDIO_CHORUS_MODULATION_RATE,
+    KSPROPERTY_AUDIO_CHORUS_MODULATION_DEPTH,
+    KSPROPERTY_AUDIO_REVERB_TIME,
+    KSPROPERTY_AUDIO_REVERB_DELAY_FEEDBACK,
+    # KSPROPERTY_AUDIO_MIC_SENSITIVITY,
+    # KSPROPERTY_AUDIO_MIC_SNR,
+    # KSPROPERTY_AUDIO_MIC_SENSITIVITY2,
+    JackDescription,
+    EPcxConnectionType,
+    KSJACK_SINK_INFORMATION,
+    KSNODETYPE
+)
 
 
 IID_IMMDeviceCollection = IID(
@@ -159,13 +217,13 @@ from .devicetopologyapi import (
     IKsJackDescription,
     IKsJackDescription2,
     IKsJackSinkInformation,
-    IAudioAutoGainControl,
-    IAudioBass,
+    # IAudioAutoGainControl,
+    # IAudioBass,
     IAudioChannelConfig,
-    IAudioLoudness,
-    IAudioMidrange,
+    # IAudioLoudness,
+    # IAudioMidrange,
     IAudioOutputSelector,
-    IAudioTreble,
+    # IAudioTreble,
     IConnector,
     ISubunit,
     PartType,
@@ -414,96 +472,30 @@ class IMMEndpoint(comtypes.IUnknown):
 
 # noinspection PyTypeChecker
 PIMMEndpoint = POINTER(IMMEndpoint)
-
-from .dsound import (
-    DS3DALG_DEFAULT,
-    DS3DALG_NO_VIRTUALIZATION,
-    DS3DALG_HRTF_FULL,
-    DS3DALG_HRTF_LIGHT
-)
-from .ksmedia import (
-    KSNODEPROPERTY_AUDIO_CHANNEL,
-    KSNODEPROPERTY,
-    AudioSpeakers,
-    KSPROPERTY_AEC_MODE,
-    KSPROPSETID_Acoustic_Echo_Cancel,
-    KSNODETYPE_ACOUSTIC_ECHO_CANCEL,
-    AEC_MODE_PASS_THROUGH,
-    AEC_MODE_HALF_DUPLEX,
-    AEC_MODE_FULL_DUPLEX,
-    KSPROPSETID_Audio,
-    PARTID_MASK,
-    KSNODETYPE_TONE,
-    KSNODETYPE_EQUALIZER,
-    KSNODETYPE_AGC,
-    KSNODETYPE_NOISE_SUPPRESS,
-    KSNODETYPE_LOUDNESS,
-    KSNODETYPE_PROLOGIC_DECODER,
-    KSNODETYPE_STEREO_WIDE,
-    KSNODETYPE_REVERB,
-    KSNODETYPE_CHORUS,
-    KSNODETYPE_3D_EFFECTS,
-    KSNODETYPE_PARAMETRIC_EQUALIZER,
-    KSNODETYPE_DYN_RANGE_COMPRESSOR,
-    KSPROPERTY_AUDIO_DYNAMIC_RANGE,
-    KSPROPERTY_AUDIO_BASS,
-    KSPROPERTY_AUDIO_MID,
-    KSPROPERTY_AUDIO_TREBLE,
-    KSPROPERTY_AUDIO_BASS_BOOST,
-    KSPROPERTY_AUDIO_EQ_LEVEL,
-    KSPROPERTY_AUDIO_NUM_EQ_BANDS,
-    KSPROPERTY_AUDIO_EQ_BANDS,
-    KSPROPERTY_AUDIO_AGC,
-    KSPROPERTY_AUDIO_LOUDNESS,
-    KSPROPERTY_AUDIO_WIDENESS,
-    KSPROPERTY_AUDIO_REVERB_LEVEL,
-    KSPROPERTY_AUDIO_CHORUS_LEVEL,
-    KSPROPERTY_AUDIO_SURROUND_ENCODE,
-    KSPROPERTY_AUDIO_3D_INTERFACE,
-    KSPROPERTY_AUDIO_PEQ_MAX_BANDS,
-    KSPROPERTY_AUDIO_PEQ_NUM_BANDS,
-    KSPROPERTY_AUDIO_PEQ_BAND_CENTER_FREQ,
-    KSPROPERTY_AUDIO_PEQ_BAND_Q_FACTOR,
-    KSPROPERTY_AUDIO_PEQ_BAND_LEVEL,
-    KSPROPERTY_AUDIO_CHORUS_MODULATION_RATE,
-    KSPROPERTY_AUDIO_CHORUS_MODULATION_DEPTH,
-    KSPROPERTY_AUDIO_REVERB_TIME,
-    KSPROPERTY_AUDIO_REVERB_DELAY_FEEDBACK,
-    KSPROPERTY_AUDIO_MIC_SENSITIVITY,
-    KSPROPERTY_AUDIO_MIC_SNR,
-    KSPROPERTY_AUDIO_MIC_SENSITIVITY2,
-)
-
-KSNODETYPE_PROLOGIC_DECODER
-KSPROPERTY_AUDIO_SURROUND_ENCODE,
-KSPROPERTY_AUDIO_3D_INTERFACE,
-
-
-KSNODETYPE_DYN_RANGE_COMPRESSOR
-KSPROPERTY_AUDIO_DYNAMIC_RANGE
-
-
-KSNODETYPE_NOISE_SUPPRESS
-KSPROPERTY_AUDIO_MIC_SENSITIVITY
-KSPROPERTY_AUDIO_MIC_SNR
-KSPROPERTY_AUDIO_MIC_SENSITIVITY2
-
-
-KSNODETYPE_PARAMETRIC_EQUALIZER
-KSPROPERTY_AUDIO_PEQ_MAX_BANDS
-KSPROPERTY_AUDIO_PEQ_NUM_BANDS
-KSPROPERTY_AUDIO_PEQ_BAND_CENTER_FREQ
-KSPROPERTY_AUDIO_PEQ_BAND_Q_FACTOR
-KSPROPERTY_AUDIO_PEQ_BAND_LEVEL
-
-
-from .ksproxy import IKsControl
-from .ks import (
-    KSPROPERTY_TYPE_GET,
-    KSPROPERTY_TYPE_SET,
-    KSPROPERTY_TYPE_TOPOLOGY,
-    KSTIME
-)
+#
+# KSNODETYPE_PROLOGIC_DECODER
+# KSPROPERTY_AUDIO_SURROUND_ENCODE,
+# KSPROPERTY_AUDIO_3D_INTERFACE,
+#
+#
+# KSNODETYPE_DYN_RANGE_COMPRESSOR
+# KSPROPERTY_AUDIO_DYNAMIC_RANGE
+#
+#
+# KSNODETYPE_NOISE_SUPPRESS
+# KSPROPERTY_AUDIO_MIC_SENSITIVITY
+# KSPROPERTY_AUDIO_MIC_SNR
+# KSPROPERTY_AUDIO_MIC_SENSITIVITY2
+#
+#
+# KSNODETYPE_PARAMETRIC_EQUALIZER
+# KSPROPERTY_AUDIO_PEQ_MAX_BANDS
+# KSPROPERTY_AUDIO_PEQ_NUM_BANDS
+# KSPROPERTY_AUDIO_PEQ_BAND_CENTER_FREQ
+# KSPROPERTY_AUDIO_PEQ_BAND_Q_FACTOR
+# KSPROPERTY_AUDIO_PEQ_BAND_LEVEL
+#
+#
 
 
 class ChorusReverbBase(object):
@@ -1558,12 +1550,140 @@ class Device(object):
         self.__device_enum = device_enum
         self.__device_topology = device_topology(device=self)
         self.__endpoints = {}
-        self.__chorus = None
-        self.__reverb = None
 
         for _ in self:
             continue
 
+    @property
+    def connectors(self):
+        res = []
+        pCount = self.__device_topology.GetConnectorCount()
+        for i in range(pCount):
+            # noinspection PyTypeChecker
+            connector = POINTER(IConnector)()
+            self.__device_topology.GetConnector(i, ctypes.byref(connector))
+            res.append(connector(endpoint=self))
+
+        return res
+
+    @property
+    def subunits(self):
+        res = []
+        pCount = self.__device_topology.GetSubunitCount()
+
+        for i in range(pCount):
+            # noinspection PyTypeChecker
+            subunit = POINTER(ISubunit)()
+            self.__device_topology.GetSubunit(i, ctypes.byref(subunit))
+            res.append(subunit(endpoint=self))
+
+        return res
+
+    @property
+    def name(self):
+        for endpoint in self:
+            return endpoint.device_name
+
+    @property
+    def id(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+        return device_id.rsplit('\\', 1)[0]
+
+    def __iter__(self):
+        endpoint_ids = []
+        id_ = self.id
+        # noinspection PyTypeChecker
+        endpoint_enum = POINTER(IMMDeviceCollection)()
+
+        self.__device_enum.EnumAudioEndpoints(
+            EDataFlow.eAll,
+            DEVICE_STATE_MASK_ALL,
+            ctypes.byref(endpoint_enum)
+        )
+
+        for endpoint in endpoint_enum:
+            pDevTopoEndpt = endpoint.activate(IDeviceTopology)
+            pConnEndpt = pDevTopoEndpt.connectors[0]
+            pConnHWDev = pConnEndpt.connected_to
+            if not pConnHWDev:
+                continue
+
+            pPartConn = pConnHWDev.part
+            ppDevTopo = pPartConn.device_topology
+            device_id = ppDevTopo.device_id
+
+            if device_id != id_:
+                continue
+
+            endpoint_id = endpoint.id
+            if endpoint_id in endpoint_ids:
+                continue
+
+            endpoint_ids.append(endpoint_id)
+
+            if endpoint_id not in self.__endpoints:
+                self.__endpoints[endpoint_id] = endpoint(self, pDevTopoEndpt)
+
+        for id_ in list(self.__endpoints.keys()):
+            if id_ not in endpoint_ids:
+                del self.__endpoints[id_]
+
+        for endpoint in list(self.__endpoints.values())[:]:
+            yield endpoint
+
+
+class IMMDevice(comtypes.IUnknown):
+    """
+    Main entry point for an audio endpoint
+    """
+    _case_insensitive_ = False
+    _iid_ = IID_IMMDevice
+    _methods_ = (
+        COMMETHOD(
+            [],
+            HRESULT,
+            'Activate',
+            (['in'], REFIID, 'iid'),
+            (['in'], DWORD, 'dwClsCtx'),
+            (['in'], PPROPVARIANT, 'pActivationParams', None),
+            (['out'], POINTER(LPVOID), 'ppInterface')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'OpenPropertyStore',
+            (['in'], DWORD, 'stgmAccess'),
+            (['out'], POINTER(PIPropertyStore), 'ppProperties'),
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetId',
+            (['out'], POINTER(LPWSTR), 'ppstrId')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetState',
+            (['out'], LPDWORD, 'pdwState')
+        )
+    )
+
+    @property
+    def audio_channels(self):
+        channel_config = self.channel_config
+        if channel_config is None:
+            return []
+
+        res = []
+
+        for i in range(channel_config.num_channels):
+            audio_channel = AudioChannel(self.__device, i, self.__device_topology, self.__device_enum)
+            res.append(audio_channel)
+
+        return res
 
     @property
     def chorus(self):
@@ -1780,7 +1900,6 @@ class Device(object):
 
             break
 
-
     @property
     def wideness(self):
         data = self.__device_topology.GetDeviceId()
@@ -1862,123 +1981,6 @@ class Device(object):
                 continue
 
             break
-
-    @property
-    def connectors(self):
-        res = []
-        pCount = self.__device_topology.GetConnectorCount()
-        for i in range(pCount):
-            # noinspection PyTypeChecker
-            connector = POINTER(IConnector)()
-            self.__device_topology.GetConnector(i, ctypes.byref(connector))
-            res.append(connector(endpoint=self))
-
-        return res
-
-    @property
-    def subunits(self):
-        res = []
-        pCount = self.__device_topology.GetSubunitCount()
-
-        for i in range(pCount):
-            # noinspection PyTypeChecker
-            subunit = POINTER(ISubunit)()
-            self.__device_topology.GetSubunit(i, ctypes.byref(subunit))
-            res.append(subunit(endpoint=self))
-
-        return res
-
-    @property
-    def name(self):
-        for endpoint in self:
-            return endpoint.device_name
-
-    @property
-    def id(self):
-        data = self.__device_topology.GetDeviceId()
-        device_id = utils.convert_to_string(data)
-        _CoTaskMemFree(data)
-        return device_id.rsplit('\\', 1)[0]
-
-    def __iter__(self):
-        endpoint_ids = []
-        id_ = self.id
-        # noinspection PyTypeChecker
-        endpoint_enum = POINTER(IMMDeviceCollection)()
-
-        self.__device_enum.EnumAudioEndpoints(
-            EDataFlow.eAll,
-            DEVICE_STATE_MASK_ALL,
-            ctypes.byref(endpoint_enum)
-        )
-
-        for endpoint in endpoint_enum:
-            pDevTopoEndpt = endpoint.activate(IDeviceTopology)
-            pConnEndpt = pDevTopoEndpt.connectors[0]
-            pConnHWDev = pConnEndpt.connected_to
-            if not pConnHWDev:
-                continue
-
-            pPartConn = pConnHWDev.part
-            ppDevTopo = pPartConn.device_topology
-            device_id = ppDevTopo.device_id
-
-            if device_id != id_:
-                continue
-
-            endpoint_id = endpoint.id
-            if endpoint_id in endpoint_ids:
-                continue
-
-            endpoint_ids.append(endpoint_id)
-
-            if endpoint_id not in self.__endpoints:
-                self.__endpoints[endpoint_id] = endpoint(self, pDevTopoEndpt)
-
-        for id_ in list(self.__endpoints.keys()):
-            if id_ not in endpoint_ids:
-                del self.__endpoints[id_]
-
-        for endpoint in list(self.__endpoints.values())[:]:
-            yield endpoint
-
-
-class IMMDevice(comtypes.IUnknown):
-    """
-    Main entry point for an audio endpoint
-    """
-    _case_insensitive_ = False
-    _iid_ = IID_IMMDevice
-    _methods_ = (
-        COMMETHOD(
-            [],
-            HRESULT,
-            'Activate',
-            (['in'], REFIID, 'iid'),
-            (['in'], DWORD, 'dwClsCtx'),
-            (['in'], PPROPVARIANT, 'pActivationParams', None),
-            (['out'], POINTER(LPVOID), 'ppInterface')
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'OpenPropertyStore',
-            (['in'], DWORD, 'stgmAccess'),
-            (['out'], POINTER(PIPropertyStore), 'ppProperties'),
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'GetId',
-            (['out'], POINTER(LPWSTR), 'ppstrId')
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'GetState',
-            (['out'], LPDWORD, 'pdwState')
-        )
-    )
 
     @property
     def device_name(self):
@@ -2279,92 +2281,6 @@ class IMMDevice(comtypes.IUnknown):
         return pfPeak.value > 1E-08
 
     @property
-    def bass_boost(self):
-        data = self.__device_topology.GetDeviceId()
-        device_id = utils.convert_to_string(data)
-        _CoTaskMemFree(data)
-
-        imm_device = self.__device_enum.GetDevice(device_id)
-        iks_control = imm_device.activate(IKsControl)
-        if iks_control:
-            ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
-            ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
-            ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS_BOOST
-            ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
-            ksprop.Channel = 0
-
-            for subunit in self.subunits:
-                part = subunit.part
-                if part.sub_type != KSNODETYPE_TONE:
-                    continue
-
-                local_id = part.local_id
-                ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
-                bValue = BOOL()
-                valueSize = ULONG()
-                try:
-                    iks_control.KsProperty(
-                        ctypes.byref(ksprop.NodeProperty.Property),
-                        ctypes.sizeof(ksprop),
-                        ctypes.byref(bValue),
-                        ctypes.sizeof(bValue),
-                        ctypes.byref(valueSize)
-                    )
-                except comtypes.COMError:
-                    continue
-
-                if valueSize.value == 0:
-                    continue
-
-                return bool(bValue)
-
-    @bass_boost.setter
-    def bass_boost(self, value):
-        data = self.__device_topology.GetDeviceId()
-        device_id = utils.convert_to_string(data)
-        _CoTaskMemFree(data)
-
-        imm_device = self.__device_enum.GetDevice(device_id)
-        iks_control = imm_device.activate(IKsControl)
-        if iks_control:
-            ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
-            ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
-            ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS_BOOST
-            ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
-            ksprop.Channel = 0
-
-            for subunit in self.subunits:
-                part = subunit.part
-
-                if part.sub_type != KSNODETYPE_TONE:
-                    continue
-
-                local_id = part.local_id
-                ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
-                bValue = BOOL(value)
-                valueSize = ULONG(ctypes.sizeof(bValue))
-                try:
-                    iks_control.KsProperty(
-                        ctypes.byref(ksprop.NodeProperty.Property),
-                        ctypes.sizeof(ksprop),
-                        ctypes.byref(bValue),
-                        ctypes.sizeof(bValue),
-                        ctypes.byref(valueSize)
-                    )
-                except comtypes.COMError:
-                    continue
-
-                break
-
-    @property
-    def auto_gain_control(self) -> IAudioAutoGainControl:
-        return self.__get_interface(IAudioAutoGainControl)
-
-    @property
-    def bass(self) -> IAudioBass:
-        return self.__get_interface(IAudioBass)
-
-    @property
     def channel_config(self) -> IAudioChannelConfig:
         return self.__get_interface(IAudioChannelConfig)
 
@@ -2373,20 +2289,8 @@ class IMMDevice(comtypes.IUnknown):
         return self.__get_interface(IAudioInputSelector)
 
     @property
-    def loudness(self) -> IAudioLoudness:
-        return self.__get_interface(IAudioLoudness)
-
-    @property
-    def midrange(self) -> IAudioMidrange:
-        return self.__get_interface(IAudioMidrange)
-
-    @property
     def output(self) -> IAudioOutputSelector:
         return self.__get_interface(IAudioOutputSelector)
-
-    @property
-    def treble(self) -> IAudioTreble:
-        return self.__get_interface(IAudioTreble)
 
     def __get_interface(self, cls):
         # The device topology for an endpoint device always
@@ -2444,6 +2348,10 @@ class IMMDevice(comtypes.IUnknown):
                 # Failure of the following call means only that
                 # the part is not a MUX (input selector).
                 for p in pParts:
+                    for i in p:
+                        if isinstance(i, cls):
+                            return i
+
                     interface = p.activate(cls)
 
                     if interface:
@@ -2483,6 +2391,10 @@ class IMMDevice(comtypes.IUnknown):
     def __call__(self, device, device_topology):
         self.__device = device
         self.__device_topology = device_topology(endpoint=self)
+        self.__chorus = None
+        self.__reverb = None
+        self.__device_enum = device._Device__device_enum
+
 
         session_manager = self.activate(IAudioSessionManager2)
         if not session_manager:

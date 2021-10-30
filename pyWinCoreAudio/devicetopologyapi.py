@@ -28,6 +28,24 @@ from .ksmedia import (
     PKSJACK_DESCRIPTION2,
     PKSJACK_SINK_INFORMATION,
     KSNODETYPE,
+    SPEAKER_FRONT_LEFT,
+    SPEAKER_FRONT_RIGHT,
+    SPEAKER_FRONT_CENTER,
+    SPEAKER_LOW_FREQUENCY,
+    SPEAKER_BACK_LEFT,
+    SPEAKER_BACK_RIGHT,
+    SPEAKER_FRONT_LEFT_OF_CENTER,
+    SPEAKER_FRONT_RIGHT_OF_CENTER,
+    SPEAKER_BACK_CENTER,
+    SPEAKER_SIDE_LEFT,
+    SPEAKER_SIDE_RIGHT,
+    SPEAKER_TOP_CENTER,
+    SPEAKER_TOP_FRONT_LEFT,
+    SPEAKER_TOP_FRONT_CENTER,
+    SPEAKER_TOP_FRONT_RIGHT,
+    SPEAKER_TOP_BACK_LEFT,
+    SPEAKER_TOP_BACK_CENTER,
+    SPEAKER_TOP_BACK_RIGHT
 )
 from .ks import PKSDATAFORMAT
 from . import utils
@@ -412,15 +430,154 @@ class IAudioChannelConfig(InterfaceBase):
         )
     )
 
-    @property
-    def value(self):
-        # noinspection PyUnresolvedReferences
-        return self.GetChannelConfig()
+    def __init__(self):
+        InterfaceBase.__init__(self)
+        self.front_left = False
+        self.front_left_of_center = False
+        self.front_center = False
+        self.front_right_of_center = False
+        self.front_right = False
+        self.side_left = False
+        self.side_right = False
+        self.back_left = False
+        self.back_center = False
+        self.back_right = False
+        self.high_center = False
+        self.high_front_left = False
+        self.high_front_center = False
+        self.high_front_right = False
+        self.high_back_left = False
+        self.high_back_center = False
+        self.high_back_right = False
+        self.subwoofer = False
 
-    @value.setter
-    def value(self, val):
+    def __call__(self, name):
+        InterfaceBase.__call__(self, name)
+
         # noinspection PyUnresolvedReferences
-        self.SetChannelConfig(DWORD(val), NULL)
+        value = self.GetChannelConfig()
+        self.front_left = value | SPEAKER_FRONT_LEFT == value
+        self.front_left_of_center = value | SPEAKER_FRONT_LEFT_OF_CENTER == value
+        self.front_center = value | SPEAKER_FRONT_CENTER == value
+        self.front_right_of_center = value | SPEAKER_FRONT_RIGHT_OF_CENTER == value
+        self.front_right = value | SPEAKER_FRONT_RIGHT == value
+        self.side_left = value | SPEAKER_SIDE_LEFT == value
+        self.side_right = value | SPEAKER_SIDE_RIGHT == value
+        self.back_left = value | SPEAKER_BACK_LEFT == value
+        self.back_center = value | SPEAKER_BACK_CENTER == value
+        self.back_right = value | SPEAKER_BACK_RIGHT == value
+        self.high_center = value | SPEAKER_TOP_CENTER == value
+        self.high_front_left = value | SPEAKER_TOP_FRONT_LEFT == value
+        self.high_front_center = value | SPEAKER_TOP_FRONT_CENTER == value
+        self.high_front_right = value | SPEAKER_TOP_FRONT_RIGHT == value
+        self.high_back_left = value | SPEAKER_TOP_BACK_LEFT == value
+        self.high_back_center = value | SPEAKER_TOP_BACK_CENTER == value
+        self.high_back_right = value | SPEAKER_TOP_BACK_RIGHT == value
+        self.subwoofer = value | SPEAKER_LOW_FREQUENCY == value
+
+        return self
+
+    @property
+    def num_channels(self):
+        value = sum([
+            self.front_left,
+            self.front_left_of_center,
+            self.front_center,
+            self.front_right_of_center,
+            self.front_right,
+            self.side_left,
+            self.side_right,
+            self.back_left,
+            self.back_center,
+            self.back_right,
+            self.high_center,
+            self.high_front_left,
+            self.high_front_center,
+            self.high_front_right,
+            self.high_back_left,
+            self.high_back_center,
+            self.high_back_right,
+            self.subwoofer
+        ])
+
+        return value
+
+    def save(self):
+
+        value = 0
+
+        if self.front_left:
+            value |= SPEAKER_FRONT_LEFT
+        if self.front_left_of_center:
+            value |= SPEAKER_FRONT_LEFT_OF_CENTER
+        if self.front_center:
+            value |= SPEAKER_FRONT_CENTER
+        if self.front_right_of_center:
+            value |= SPEAKER_FRONT_RIGHT_OF_CENTER
+        if self.front_right:
+            value |= SPEAKER_FRONT_RIGHT
+        if self.side_left:
+            value |= SPEAKER_SIDE_LEFT
+        if self.side_right:
+            value |= SPEAKER_SIDE_RIGHT
+        if self.back_left:
+            value |= SPEAKER_BACK_LEFT
+        if self.back_center:
+            value |= SPEAKER_BACK_CENTER
+        if self.back_right:
+            value |= SPEAKER_BACK_RIGHT
+        if self.high_center:
+            value |= SPEAKER_TOP_CENTER
+        if self.high_front_left:
+            value |= SPEAKER_TOP_FRONT_LEFT
+        if self.high_front_center:
+            value |= SPEAKER_TOP_FRONT_CENTER
+        if self.high_front_right:
+            value |= SPEAKER_TOP_FRONT_RIGHT
+        if self.high_back_left:
+            value |= SPEAKER_TOP_BACK_LEFT
+        if self.high_back_center:
+            value |= SPEAKER_TOP_BACK_CENTER
+        if self.high_back_right:
+            value |= SPEAKER_TOP_BACK_RIGHT
+        if self.subwoofer:
+            value |= SPEAKER_LOW_FREQUENCY
+
+        # noinspection PyUnresolvedReferences
+        self.SetChannelConfig(DWORD(value), NULL)
+
+    def __str__(self):
+        eye_level = sum([
+            self.front_left,
+            self.front_left_of_center,
+            self.front_center,
+            self.front_right_of_center,
+            self.front_right,
+            self.side_left,
+            self.side_right,
+            self.back_left,
+            self.back_center,
+            self.back_right
+        ])
+
+        three_d = sum([
+            self.high_center,
+            self.high_front_left,
+            self.high_front_center,
+            self.high_front_right,
+            self.high_back_left,
+            self.high_back_center,
+            self.high_back_right
+        ])
+
+        sw = int(self.subwoofer)
+        if three_d:
+            return '{0}.{1}.{2}'.format(eye_level, sw, three_d)
+        if eye_level:
+            return '{0}.{1}'.format(eye_level, sw)
+        if sw:
+            return '{0}.{1}'.format(eye_level, sw)
+        return '0'
 
 
 # noinspection PyTypeChecker

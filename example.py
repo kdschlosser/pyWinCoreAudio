@@ -196,14 +196,11 @@ for device in devices():
         print('        presence_detection:', endpoint.presence_detection)
         print('        connector_color:', endpoint.connector_color)
         print('        is_connected:', endpoint.is_connected)
-        print('        auto_gain_control:', endpoint.auto_gain_control)
-        print('        bass:', endpoint.bass)
         print('        channel_config:', endpoint.channel_config)
         print('        input:', endpoint.input)
-        print('        loudness:', endpoint.loudness)
-        print('        midrange:', endpoint.midrange)
         print('        output:', endpoint.output)
-        print('        treble:', endpoint.treble)
+        print('        audio_channels:', endpoint.audio_channels)
+
         volume = endpoint.volume
         if volume is not None:
 

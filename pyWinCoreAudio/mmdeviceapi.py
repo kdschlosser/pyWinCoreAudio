@@ -28,6 +28,7 @@ from .endpointvolumeapi import (
     IAudioEndpointVolume
 )  # NOQA
 from .signal import (
+    tw,
     ON_DEVICE_STATE_CHANGED,
     ON_DEVICE_ADDED,
     ON_DEVICE_REMOVED,
@@ -230,33 +231,36 @@ class IMMNotificationClient(comtypes.COMObject):
 
     def OnDeviceStateChanged(self, pwstrDeviceId, dwNewState):
         print('OnDeviceStateChanged')
-
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
-        if dwNewState == DEVICE_STATE_UNPLUGGED:
-            state = 'Unplugged'
-        elif dwNewState == DEVICE_STATE_NOTPRESENT:
-            state = 'Not Present'
-        elif dwNewState == DEVICE_STATE_DISABLED:
-            state = 'Disabled'
-        elif dwNewState == DEVICE_STATE_ACTIVE:
-            state = 'Active'
-        else:
-            state = 'Unknown'
+        def _do(dev_id, new_state):
 
-        for device in self.__device_enum:
-            if device.id == pwstrDeviceId:
-                ON_DEVICE_STATE_CHANGED.signal(device=device, new_state=state)
+            if new_state == DEVICE_STATE_UNPLUGGED:
+                state = 'Unplugged'
+            elif new_state == DEVICE_STATE_NOTPRESENT:
+                state = 'Not Present'
+            elif new_state == DEVICE_STATE_DISABLED:
+                state = 'Disabled'
+            elif new_state == DEVICE_STATE_ACTIVE:
+                state = 'Active'
+            else:
+                state = 'Unknown'
+
+            for device in self.__device_enum:
+                if device.id == dev_id:
+                    ON_DEVICE_STATE_CHANGED.signal(device=device, new_state=state)
+                    break
+
+                for endpoint in device:
+                    if endpoint.id == dev_id:
+                        ON_DEVICE_STATE_CHANGED.signal(device=device, endpoint=endpoint, new_state=state)
+                        break
+                else:
+                    continue
+
                 break
 
-            for endpoint in device:
-                if endpoint.id == pwstrDeviceId:
-                    ON_DEVICE_STATE_CHANGED.signal(device=device, endpoint=endpoint, new_state=state)
-                    break
-            else:
-                continue
-
-            break
+        tw.add(_do, pwstrDeviceId, dwNewState)
 
         return S_OK
 
@@ -264,10 +268,14 @@ class IMMNotificationClient(comtypes.COMObject):
         print('OnDeviceAdded')
 
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
-        for device in self.__device_enum:
-            if device.id == pwstrDeviceId:
-                ON_DEVICE_ADDED.signal(device=device)
-                break
+
+        def _do(dev_id):
+            for device in self.__device_enum:
+                if device.id == dev_id:
+                    ON_DEVICE_ADDED.signal(device=device)
+                    break
+
+        tw.add(_do, pwstrDeviceId)
 
         return S_OK
 
@@ -276,12 +284,16 @@ class IMMNotificationClient(comtypes.COMObject):
 
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
-        name = self.__device_enum.get_device_name(pwstrDeviceId)
+        def _do(dev_id):
+            name = self.__device_enum.get_device_name(dev_id)
 
-        for _ in self.__device_enum:
-            continue
+            for _ in self.__device_enum:
+                continue
 
-        ON_DEVICE_REMOVED.signal(name=name)
+            if name:
+                ON_DEVICE_REMOVED.signal(name=name)
+
+        tw.add(_do, pwstrDeviceId)
         return S_OK
 
     def OnDefaultDeviceChanged(self, flow, role, pwstrDefaultDeviceId):
@@ -290,10 +302,10 @@ class IMMNotificationClient(comtypes.COMObject):
         flow = EDataFlow.get(flow.value)
         role = ERole.get(role.value)
 
-        def do(id_, f, r):
+        def _do(dev_id, flw, rle):
             for device in self.__device_enum:
                 for endpoint in device:
-                    if endpoint.id == id_:
+                    if endpoint.id == dev_id:
                         break
                 else:
                     continue
@@ -302,16 +314,19 @@ class IMMNotificationClient(comtypes.COMObject):
             else:
                 return
 
-            endpt = (flow, role)
-            if endpt != endpoint:
-                ON_ENDPOINT_DEFAULT_CHANGED.signal(device=device, endpoint=endpoint, role=r, flow=f)
+            ON_ENDPOINT_DEFAULT_CHANGED.signal(
+                device=device,
+                endpoint=endpoint,
+                role=rle,
+                flow=flw
+            )
 
         if (pwstrDefaultDeviceId, flow, role) not in self.__last_default_endpoint:
             self.__last_default_endpoint.append((pwstrDefaultDeviceId, flow, role))
             while len(self.__last_default_endpoint) > 3:
                 self.__last_default_endpoint.pop(0)
 
-            utils.run_in_thread(do, pwstrDefaultDeviceId, flow, role)
+            tw.add(_do, pwstrDefaultDeviceId, flow, role)
 
         return S_OK
 
@@ -320,19 +335,23 @@ class IMMNotificationClient(comtypes.COMObject):
 
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
-        for device in self.__device_enum:
-            if device.id == pwstrDeviceId:
-                ON_DEVICE_PROPERTY_CHANGED.signal(device=device, key=key)
+        def _do(dev_id, k):
+
+            for device in self.__device_enum:
+                if device.id == dev_id:
+                    ON_DEVICE_PROPERTY_CHANGED.signal(device=device, key=k)
+                    break
+
+                for endpoint in device:
+                    if endpoint.id == dev_id:
+                        ON_DEVICE_PROPERTY_CHANGED.signal(device=device, endpoint=endpoint, key=k)
+                        break
+                else:
+                    continue
+
                 break
 
-            for endpoint in device:
-                if endpoint.id == pwstrDeviceId:
-                    ON_DEVICE_PROPERTY_CHANGED.signal(device=device, endpoint=endpoint, key=key)
-                    break
-            else:
-                continue
-
-            break
+        tw.add(_do, pwstrDeviceId, key)
 
         return S_OK
 
@@ -396,6 +415,1142 @@ class IMMEndpoint(comtypes.IUnknown):
 # noinspection PyTypeChecker
 PIMMEndpoint = POINTER(IMMEndpoint)
 
+from .dsound import (
+    DS3DALG_DEFAULT,
+    DS3DALG_NO_VIRTUALIZATION,
+    DS3DALG_HRTF_FULL,
+    DS3DALG_HRTF_LIGHT
+)
+from .ksmedia import (
+    KSNODEPROPERTY_AUDIO_CHANNEL,
+    KSNODEPROPERTY,
+    AudioSpeakers,
+    KSPROPERTY_AEC_MODE,
+    KSPROPSETID_Acoustic_Echo_Cancel,
+    KSNODETYPE_ACOUSTIC_ECHO_CANCEL,
+    AEC_MODE_PASS_THROUGH,
+    AEC_MODE_HALF_DUPLEX,
+    AEC_MODE_FULL_DUPLEX,
+    KSPROPSETID_Audio,
+    PARTID_MASK,
+    KSNODETYPE_TONE,
+    KSNODETYPE_EQUALIZER,
+    KSNODETYPE_AGC,
+    KSNODETYPE_NOISE_SUPPRESS,
+    KSNODETYPE_LOUDNESS,
+    KSNODETYPE_PROLOGIC_DECODER,
+    KSNODETYPE_STEREO_WIDE,
+    KSNODETYPE_REVERB,
+    KSNODETYPE_CHORUS,
+    KSNODETYPE_3D_EFFECTS,
+    KSNODETYPE_PARAMETRIC_EQUALIZER,
+    KSNODETYPE_DYN_RANGE_COMPRESSOR,
+    KSPROPERTY_AUDIO_DYNAMIC_RANGE,
+    KSPROPERTY_AUDIO_BASS,
+    KSPROPERTY_AUDIO_MID,
+    KSPROPERTY_AUDIO_TREBLE,
+    KSPROPERTY_AUDIO_BASS_BOOST,
+    KSPROPERTY_AUDIO_EQ_LEVEL,
+    KSPROPERTY_AUDIO_NUM_EQ_BANDS,
+    KSPROPERTY_AUDIO_EQ_BANDS,
+    KSPROPERTY_AUDIO_AGC,
+    KSPROPERTY_AUDIO_LOUDNESS,
+    KSPROPERTY_AUDIO_WIDENESS,
+    KSPROPERTY_AUDIO_REVERB_LEVEL,
+    KSPROPERTY_AUDIO_CHORUS_LEVEL,
+    KSPROPERTY_AUDIO_SURROUND_ENCODE,
+    KSPROPERTY_AUDIO_3D_INTERFACE,
+    KSPROPERTY_AUDIO_PEQ_MAX_BANDS,
+    KSPROPERTY_AUDIO_PEQ_NUM_BANDS,
+    KSPROPERTY_AUDIO_PEQ_BAND_CENTER_FREQ,
+    KSPROPERTY_AUDIO_PEQ_BAND_Q_FACTOR,
+    KSPROPERTY_AUDIO_PEQ_BAND_LEVEL,
+    KSPROPERTY_AUDIO_CHORUS_MODULATION_RATE,
+    KSPROPERTY_AUDIO_CHORUS_MODULATION_DEPTH,
+    KSPROPERTY_AUDIO_REVERB_TIME,
+    KSPROPERTY_AUDIO_REVERB_DELAY_FEEDBACK,
+    KSPROPERTY_AUDIO_MIC_SENSITIVITY,
+    KSPROPERTY_AUDIO_MIC_SNR,
+    KSPROPERTY_AUDIO_MIC_SENSITIVITY2,
+)
+
+KSNODETYPE_PROLOGIC_DECODER
+KSPROPERTY_AUDIO_SURROUND_ENCODE,
+KSPROPERTY_AUDIO_3D_INTERFACE,
+
+
+KSNODETYPE_DYN_RANGE_COMPRESSOR
+KSPROPERTY_AUDIO_DYNAMIC_RANGE
+
+
+KSNODETYPE_NOISE_SUPPRESS
+KSPROPERTY_AUDIO_MIC_SENSITIVITY
+KSPROPERTY_AUDIO_MIC_SNR
+KSPROPERTY_AUDIO_MIC_SENSITIVITY2
+
+
+KSNODETYPE_PARAMETRIC_EQUALIZER
+KSPROPERTY_AUDIO_PEQ_MAX_BANDS
+KSPROPERTY_AUDIO_PEQ_NUM_BANDS
+KSPROPERTY_AUDIO_PEQ_BAND_CENTER_FREQ
+KSPROPERTY_AUDIO_PEQ_BAND_Q_FACTOR
+KSPROPERTY_AUDIO_PEQ_BAND_LEVEL
+
+
+from .ksproxy import IKsControl
+from .ks import (
+    KSPROPERTY_TYPE_GET,
+    KSPROPERTY_TYPE_SET,
+    KSPROPERTY_TYPE_TOPOLOGY,
+    KSTIME
+)
+
+
+class ChorusReverbBase(object):
+    _func1_id = None
+    _func2_id = None
+    _level_id = None
+    _node_type = None
+
+    def __init__(self, device, device_topology, device_enum):
+        self.__device = device
+        self.__device_topology = device_topology
+        self.__device_enum = device_enum
+
+    @property
+    def _func1(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return False
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = self._func1_id
+        ksprop.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != self._node_type:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bool(bValue)
+
+        return False
+
+    @_func1.setter
+    def _func1(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = self._func1_id
+        ksprop.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != self._node_type:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+    @property
+    def _func2(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return False
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = self._func2_id
+        ksprop.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != self._node_type:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bool(bValue)
+
+        return False
+
+    @_func2.setter
+    def _func2(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = self._func2_id
+        ksprop.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != self._node_type:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+    @property
+    def level(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return False
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = self._level_id
+        ksprop.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != self._node_type:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bool(bValue)
+
+        return False
+
+    @level.setter
+    def level(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = self._level_id
+        ksprop.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != self._node_type:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+
+class Chorus(ChorusReverbBase):
+    _func1_id = KSPROPERTY_AUDIO_CHORUS_MODULATION_RATE
+    _func2_id = KSPROPERTY_AUDIO_CHORUS_MODULATION_DEPTH
+    _level_id = KSPROPERTY_AUDIO_CHORUS_LEVEL
+    _node_type = KSNODETYPE_CHORUS
+
+    @property
+    def modulation_rate(self):
+        return self._func1
+
+    @modulation_rate.setter
+    def modulation_rate(self, value):
+        self._func1 = value
+
+    @property
+    def modulation_depth(self):
+        return self._func2
+
+    @modulation_depth.setter
+    def modulation_depth(self, value):
+        self._func2 = value
+
+
+class Reverb(ChorusReverbBase):
+    _func1_id = KSPROPERTY_AUDIO_REVERB_TIME
+    _func2_id = KSPROPERTY_AUDIO_REVERB_DELAY_FEEDBACK
+    _level_id = KSPROPERTY_AUDIO_REVERB_LEVEL
+    _node_type = KSNODETYPE_REVERB
+
+    @property
+    def reverb_time(self):
+        return self._func1
+
+    @reverb_time.setter
+    def reverb_time(self, value):
+        self._func1 = value
+
+    @property
+    def delay_feedback(self):
+        return self._func2
+
+    @delay_feedback.setter
+    def delay_feedback(self, value):
+        self._func2 = value
+
+
+class EQBand(object):
+
+    def __init__(self, band, frequency, device, channel_num, device_topology, device_enum):
+        self.__band = band
+        self.__frequency = frequency
+        self.__device = device
+        self.__channel_num = channel_num
+        self.__device_topology = device_topology
+        self.__device_enum = device_enum
+
+    @property
+    def band(self):
+        return self.__band
+
+    @property
+    def frequency(self):
+        return self.__frequency
+
+    @property
+    def level(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if iks_control:
+            ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+            ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+            ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_NUM_EQ_BANDS
+            ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+            ksprop.Channel = self.__channel_num
+
+            for subunit in self.__device.subunits:
+                part = subunit.part
+                if part.sub_type != KSNODETYPE_EQUALIZER:
+                    continue
+
+                local_id = part.local_id
+                ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+                bValue = ULONG()
+                valueSize = ULONG()
+                try:
+                    iks_control.KsProperty(
+                        ctypes.byref(ksprop),
+                        ctypes.sizeof(ksprop),
+                        ctypes.byref(bValue),
+                        ctypes.sizeof(bValue),
+                        ctypes.byref(valueSize)
+                    )
+                except comtypes.COMError:
+                    continue
+
+                if valueSize.value == 0:
+                    continue
+
+                num_bands = bValue.value
+                bValue = (ULONG * num_bands)()
+                valueSize = ULONG()
+                ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_EQ_LEVEL
+
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    bValue,
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+
+                return bValue[self.__band].value
+
+    @level.setter
+    def level(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_NUM_EQ_BANDS
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_EQUALIZER:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = ULONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            num_bands = bValue.value
+            bValue = (ULONG * num_bands)()
+            valueSize = ULONG()
+            ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_EQ_LEVEL
+
+            iks_control.KsProperty(
+                ctypes.byref(ksprop),
+                ctypes.sizeof(ksprop),
+                bValue,
+                ctypes.sizeof(bValue),
+                ctypes.byref(valueSize)
+            )
+
+            bValue[self.__band] = value
+
+            ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+            valueSize = ULONG(ctypes.sizeof(bValue))
+
+            iks_control.KsProperty(
+                ctypes.byref(ksprop),
+                ctypes.sizeof(ksprop),
+                bValue,
+                ctypes.sizeof(bValue),
+                ctypes.byref(valueSize)
+            )
+
+
+class Equalizer(object):
+    def __init__(self, channel_num, device, device_topology, device_enum):
+        self.__device = device
+        self.__channel_num = channel_num
+        self.__device_topology = device_topology
+        self.__device_enum = device_enum
+
+    @property
+    def bands(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+
+        res = []
+
+        if not iks_control:
+            return res
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_NUM_EQ_BANDS
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_EQUALIZER:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = ULONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            num_bands = bValue.value
+            bValue = (ULONG * num_bands)()
+            valueSize = ULONG()
+            ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_EQ_BANDS
+
+            iks_control.KsProperty(
+                ctypes.byref(ksprop),
+                ctypes.sizeof(ksprop),
+                bValue,
+                ctypes.sizeof(bValue),
+                ctypes.byref(valueSize)
+            )
+
+            for i in range(num_bands):
+                frequency = bValue[i].value
+                eq_band = EQBand(
+                    i,
+                    frequency,
+                    self.__device,
+                    self.__channel_num,
+                    self.__device_topology,
+                    self.__device_enum
+                )
+
+                res.append(eq_band)
+
+            break
+
+        return res
+
+
+class AudioChannel(object):
+
+    def __init__(self, device, channel_num, device_topology, device_enum):
+        self.__device = device
+        self.__channel_num = channel_num
+        self.__device_topology = device_topology
+        self.__device_enum = device_enum
+        self.__eq = None
+
+    @property
+    def channel_num(self):
+        return self.__channel_num
+
+    @property
+    def eq(self):
+        if self.__eq is None:
+            self.__eq = Equalizer(
+                self.__channel_num,
+                self.__device,
+                self.__device_topology,
+                self.__device_enum
+            )
+
+        return self.__eq
+
+    @property
+    def bass_boost(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return False
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS_BOOST
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_TONE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = BOOL()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bool(bValue)
+
+        return False
+
+    @bass_boost.setter
+    def bass_boost(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS_BOOST
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_TONE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = BOOL(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+    @property
+    def loudness(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return False
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_LOUDNESS
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_LOUDNESS:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = BOOL()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+                
+            if valueSize.value == 0:
+                continue
+
+            return bool(bValue)
+
+        return False
+
+    @loudness.setter
+    def loudness(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_LOUDNESS
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_LOUDNESS:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = BOOL(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+    @property
+    def automatic_gain_control(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return False
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_AGC
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_AGC:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = BOOL()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bool(bValue)
+
+        return False
+
+    @automatic_gain_control.setter
+    def automatic_gain_control(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_AGC
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_AGC:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = BOOL(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+    @property
+    def bass(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_AGC:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = LONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bValue.value
+
+    @bass.setter
+    def bass(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_TONE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = LONG(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+    @property
+    def mid(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_MID
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_TONE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = LONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bValue.value
+
+    @mid.setter
+    def mid(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_MID
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_TONE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = LONG(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+    @property
+    def treble(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_TREBLE
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+        for subunit in self.__device.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_TONE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = LONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bValue.value
+
+    @treble.setter
+    def treble(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+        ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+        ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_TREBLE
+        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.Channel = self.__channel_num
+
+        for subunit in self.__device.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_TONE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+            bValue = LONG(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
 
 class Device(object):
 
@@ -403,9 +1558,310 @@ class Device(object):
         self.__device_enum = device_enum
         self.__device_topology = device_topology(device=self)
         self.__endpoints = {}
+        self.__chorus = None
+        self.__reverb = None
 
         for _ in self:
             continue
+
+
+    @property
+    def chorus(self):
+        if self.__chorus is None:
+            self.__chorus = Chorus(self, self.__device_topology, self.__device_enum)
+
+        return self.__chorus
+
+    @property
+    def reverb(self):
+        if self.__reverb is None:
+            self.__reverb = Reverb(self, self.__device_topology, self.__device_enum)
+
+        return self.__reverb
+
+    @property
+    def three_d(self):
+        """
+        DS3DALG_DEFAULT
+        DS3DALG_NO_VIRTUALIZATION
+        DS3DALG_HRTF_FULL
+        DS3DALG_HRTF_LIGHT
+        """
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = KSPROPERTY_AUDIO_WIDENESS
+        ksprop.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_3D_EFFECTS:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = GUID()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            if bValue == DS3DALG_DEFAULT:
+                return DS3DALG_DEFAULT
+            if bValue == DS3DALG_NO_VIRTUALIZATION:
+                return DS3DALG_NO_VIRTUALIZATION
+            if bValue == DS3DALG_HRTF_FULL:
+                return DS3DALG_HRTF_FULL
+            if bValue == DS3DALG_HRTF_LIGHT:
+                return DS3DALG_HRTF_LIGHT
+
+            break
+        return
+
+    @three_d.setter
+    def three_d(self, value):
+        """
+        DS3DALG_DEFAULT
+        DS3DALG_NO_VIRTUALIZATION
+        DS3DALG_HRTF_FULL
+        DS3DALG_HRTF_LIGHT
+        """
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = KSPROPERTY_AUDIO_WIDENESS
+        ksprop.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_3D_EFFECTS:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = value
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+    @property
+    def acoustic_echo_cancel_mode(self):
+        """
+        AEC_MODE_PASS_THROUGH
+        AEC_MODE_HALF_DUPLEX
+        AEC_MODE_FULL_DUPLEX
+        """
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return False
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Acoustic_Echo_Cancel
+        ksprop.Property.Id = KSPROPERTY_AEC_MODE
+        ksprop.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_ACOUSTIC_ECHO_CANCEL:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            if bValue.value == AEC_MODE_PASS_THROUGH:
+                return AEC_MODE_PASS_THROUGH
+
+            if bValue.value == AEC_MODE_HALF_DUPLEX:
+                return AEC_MODE_HALF_DUPLEX
+
+            if bValue.value == AEC_MODE_FULL_DUPLEX:
+                return AEC_MODE_FULL_DUPLEX
+
+        return False
+
+    @acoustic_echo_cancel_mode.setter
+    def acoustic_echo_cancel_mode(self, value):
+        """
+        AEC_MODE_PASS_THROUGH
+        AEC_MODE_HALF_DUPLEX
+        AEC_MODE_FULL_DUPLEX
+        """
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Acoustic_Echo_Cancel
+        ksprop.Property.Id = KSPROPERTY_AEC_MODE
+        ksprop.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_ACOUSTIC_ECHO_CANCEL:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
+
+
+    @property
+    def wideness(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return False
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = KSPROPERTY_AUDIO_WIDENESS
+        ksprop.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.subunits:
+            part = subunit.part
+            if part.sub_type != KSNODETYPE_STEREO_WIDE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG()
+            valueSize = ULONG()
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            if valueSize.value == 0:
+                continue
+
+            return bool(bValue)
+
+        return False
+
+    @wideness.setter
+    def wideness(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if not iks_control:
+            return
+
+        ksprop = KSNODEPROPERTY()
+        ksprop.Property.Set = KSPROPSETID_Audio
+        ksprop.Property.Id = KSPROPERTY_AUDIO_WIDENESS
+        ksprop.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+
+        for subunit in self.subunits:
+            part = subunit.part
+
+            if part.sub_type != KSNODETYPE_STEREO_WIDE:
+                continue
+
+            local_id = part.local_id
+            ksprop.NodeId = local_id & PARTID_MASK
+            bValue = ULONG(value)
+            valueSize = ULONG(ctypes.sizeof(bValue))
+            try:
+                iks_control.KsProperty(
+                    ctypes.byref(ksprop),
+                    ctypes.sizeof(ksprop),
+                    ctypes.byref(bValue),
+                    ctypes.sizeof(bValue),
+                    ctypes.byref(valueSize)
+                )
+            except comtypes.COMError:
+                continue
+
+            break
 
     @property
     def connectors(self):
@@ -823,6 +2279,84 @@ class IMMDevice(comtypes.IUnknown):
         return pfPeak.value > 1E-08
 
     @property
+    def bass_boost(self):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if iks_control:
+            ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+            ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+            ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS_BOOST
+            ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+            ksprop.Channel = 0
+
+            for subunit in self.subunits:
+                part = subunit.part
+                if part.sub_type != KSNODETYPE_TONE:
+                    continue
+
+                local_id = part.local_id
+                ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+                bValue = BOOL()
+                valueSize = ULONG()
+                try:
+                    iks_control.KsProperty(
+                        ctypes.byref(ksprop.NodeProperty.Property),
+                        ctypes.sizeof(ksprop),
+                        ctypes.byref(bValue),
+                        ctypes.sizeof(bValue),
+                        ctypes.byref(valueSize)
+                    )
+                except comtypes.COMError:
+                    continue
+
+                if valueSize.value == 0:
+                    continue
+
+                return bool(bValue)
+
+    @bass_boost.setter
+    def bass_boost(self, value):
+        data = self.__device_topology.GetDeviceId()
+        device_id = utils.convert_to_string(data)
+        _CoTaskMemFree(data)
+
+        imm_device = self.__device_enum.GetDevice(device_id)
+        iks_control = imm_device.activate(IKsControl)
+        if iks_control:
+            ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
+            ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
+            ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS_BOOST
+            ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+            ksprop.Channel = 0
+
+            for subunit in self.subunits:
+                part = subunit.part
+
+                if part.sub_type != KSNODETYPE_TONE:
+                    continue
+
+                local_id = part.local_id
+                ksprop.NodeProperty.NodeId = local_id & PARTID_MASK
+                bValue = BOOL(value)
+                valueSize = ULONG(ctypes.sizeof(bValue))
+                try:
+                    iks_control.KsProperty(
+                        ctypes.byref(ksprop.NodeProperty.Property),
+                        ctypes.sizeof(ksprop),
+                        ctypes.byref(bValue),
+                        ctypes.sizeof(bValue),
+                        ctypes.byref(valueSize)
+                    )
+                except comtypes.COMError:
+                    continue
+
+                break
+
+    @property
     def auto_gain_control(self) -> IAudioAutoGainControl:
         return self.__get_interface(IAudioAutoGainControl)
 
@@ -1111,7 +2645,7 @@ class _IMMDeviceEnumerator(comtypes.IUnknown):
             HRESULT,
             'GetDevice',
             (['in'], LPCWSTR, 'pwstrId'),
-            (['in'], POINTER(PIMMDevice), 'ppDevices')
+            (['out'], POINTER(PIMMDevice), 'ppDevices')
         ),
         COMMETHOD(
             [],

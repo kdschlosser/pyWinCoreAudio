@@ -193,3 +193,15 @@ class KSDATAFORMAT(ctypes.Structure):
 
 
 PKSDATAFORMAT = POINTER(KSDATAFORMAT)
+
+
+class KSTIME(ctypes.Structure):
+    _fields_ = [
+        ('Time', LONGLONG),
+        ('Numerator', ULONG),
+        ('Denominator', ULONG)
+    ]
+
+
+PKSTIME = POINTER(KSTIME)
+

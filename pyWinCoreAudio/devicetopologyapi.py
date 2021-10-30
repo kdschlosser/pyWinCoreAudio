@@ -1027,7 +1027,7 @@ class IPart(comtypes.IUnknown):
         # noinspection PyUnresolvedReferences
         self.GetSubType(ctypes.byref(guid))
 
-        return KSNODETYPE.get(guid, '')
+        return KSNODETYPE.get(guid, GUID())
 
     def __iter__(self):
         # noinspection PyUnresolvedReferences

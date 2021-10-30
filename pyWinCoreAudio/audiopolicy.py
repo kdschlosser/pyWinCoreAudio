@@ -27,6 +27,7 @@ from .audiosessiontypes import (
     PAudioSessionState
 )
 from .signal import (
+    tw,
     ON_SESSION_VOLUME_DUCK,
     ON_SESSION_VOLUME_UNDUCK,
     ON_SESSION_CREATED,
@@ -224,7 +225,6 @@ class IAudioSessionEvents(comtypes.COMObject):
 
     def OnStateChanged(self, NewState, _):
         print('OnStateChanged')
-
 
         NewState = AudioSessionState.get(NewState)
         ON_SESSION_STATE_CHANGED.signal(
@@ -467,28 +467,33 @@ PIAudioSessionNotification = POINTER(_IAudioSessionNotification)
 class IAudioSessionNotification(comtypes.COMObject):
     _com_interfaces_ = [_IAudioSessionNotification]
 
-    def __init__(self, endpoint):
+    def __init__(self, session_manager, endpoint):
+        self.__session_manager = session_manager
         self.__endpoint = endpoint
+
         comtypes.COMObject.__init__(self)
 
     def OnSessionCreated(self, NewSession):
-        print('OnSessionCreated')
+        def _do(ns):
 
-        session_manager = self.__endpoint.session_manager
+            session_control2 = ns.QueryInterface(IAudioSessionControl2)
+            if session_control2:
+                id_ = session_control2.instance_id
+                for session in self.__session_manager:
+                    if session.instance_id == id_:
+                        break
 
-        name = utils.convert_to_string(NewSession.GetDisplayName())
+                else:
+                    return
 
-        for session in session_manager:
-            if session.name == name:
-                break
-        else:
-            return S_OK
+                ON_SESSION_CREATED.signal(
+                    device=self.__endpoint.device,
+                    endpoint=self.__endpoint,
+                    session=session
+                )
 
-        ON_SESSION_CREATED.signal(
-            device=self.__endpoint.device,
-            endpoint=self.__endpoint,
-            session=session
-        )
+        tw.add(_do, NewSession)
+
         return S_OK
 
 
@@ -778,7 +783,7 @@ class IAudioSessionManager2(IAudioSessionManager):
 
     def __call__(self, endpoint):
         self.__endpoint = endpoint
-        self.__session_notification = IAudioSessionNotification(endpoint)
+        self.__session_notification = IAudioSessionNotification(self, endpoint)
 
         # noinspection PyUnresolvedReferences
         self.RegisterSessionNotification(self.__session_notification)

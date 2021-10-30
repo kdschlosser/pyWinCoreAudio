@@ -71,7 +71,7 @@ class Signal(object):
             if cb is None:
                 self._callbacks.remove(wcb)
             else:
-                _tw.add(cb, signal=self, *args, **kwargs)
+                tw.add(cb, signal=self, *args, **kwargs)
 
 
 class SessionSignal(object):
@@ -134,7 +134,7 @@ class SessionSignal(object):
                 if cb is None:
                     del self._callbacks[(wd, we, ws)]
                 else:
-                    _tw.add(cb, signal=self, device=device, endpoint=endpoint, session=session, *args, **kwargs)
+                    tw.add(cb, signal=self, device=device, endpoint=endpoint, session=session, *args, **kwargs)
 
 
 class EndpointSignal(object):
@@ -186,7 +186,7 @@ class EndpointSignal(object):
                 if cb is None:
                     del self._callbacks[(wd, we)]
                 else:
-                    _tw.add(cb, signal=self, device=device, endpoint=endpoint, *args, **kwargs)
+                    tw.add(cb, signal=self, device=device, endpoint=endpoint, *args, **kwargs)
 
 
 class DeviceSignal(object):
@@ -229,7 +229,7 @@ class DeviceSignal(object):
                 if cb is None:
                     del self._callbacks[wd]
                 else:
-                    _tw.add(cb, signal=self, device=device, *args, **kwargs)
+                    tw.add(cb, signal=self, device=device, *args, **kwargs)
 
 
 class InterfaceSignal(object):
@@ -289,7 +289,7 @@ class InterfaceSignal(object):
                 if cb is None:
                     del self._callbacks[(wd, we, wi)]
                 else:
-                    _tw.add(cb, signal=self, device=device, endpoint=endpoint, interface=interface, *args, **kwargs)
+                    tw.add(cb, signal=self, device=device, endpoint=endpoint, interface=interface, *args, **kwargs)
 
 
 class SignalThreadWorker(object):
@@ -335,7 +335,7 @@ class SignalThreadWorker(object):
                 self._thread.start()
 
 
-_tw = SignalThreadWorker()
+tw = SignalThreadWorker()
 
 ON_DEVICE_ADDED = Signal()
 ON_DEVICE_REMOVED = Signal()

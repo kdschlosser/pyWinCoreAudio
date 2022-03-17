@@ -35,7 +35,7 @@ from pyWinCoreAudio import (
     ON_SESSION_VOLUME_CHANGED,
     ON_SESSION_STATE_CHANGED,
     ON_SESSION_CHANNEL_VOLUME_CHANGED,
-    ON_PART_CHANGE
+    ON_PART_CHANGE,
 )
 
 
@@ -145,6 +145,10 @@ _on_session_disconnect = ON_SESSION_DISCONNECT.register(on_session_disconnect)
 
 def on_session_volume_changed(signal, device, endpoint, session, new_volume, new_mute):
     print('Session volume changed:', device.name + '.' + endpoint.name + '.' + session.name, 'volume:', new_volume, 'mute:', new_mute)
+    if new_volume <= 15.0:
+        print('setting session volume', session.volume.level)
+        session.volume.level = 50.0
+        print('new session volume =', session.volume.level)
 
 
 _on_session_volume_changed = ON_SESSION_VOLUME_CHANGED.register(on_session_volume_changed)

@@ -19,6 +19,7 @@
 from .data_types import *
 import ctypes
 import comtypes
+from .utils import remap
 from .audiosessiontypes import AUDIO_STREAM_CATEGORY
 from .mmdeviceapi import (
     IID_IActivateAudioInterfaceAsyncOperation,
@@ -482,12 +483,25 @@ class ISimpleAudioVolume(comtypes.IUnknown):
         """
         # noinspection PyUnresolvedReferences
         vol = self.GetMasterVolume()
-        return vol * 100.0
+
+        endpoint_volume = self.__session.endpoint.volume.level
+        return vol * endpoint_volume
 
     @level.setter
     def level(self, value: float):
         # noinspection PyUnresolvedReferences
-        self.SetMasterVolume(FLOAT(value / 100.0), NULL)
+
+        endpoint_volume = self.__session.endpoint.volume.level
+
+        print('endpoint volume:', endpoint_volume)
+
+        if value > endpoint_volume:
+            self.__session.endpoint.volume.level = value
+
+        new_volume = remap(value, 0.0, endpoint_volume, 0.0, 100.0)
+        self.SetMasterVolume(FLOAT(new_volume / 100.0), NULL)
+        print('new session volume:', new_volume)
+
 
     @property
     def mute(self) -> bool:

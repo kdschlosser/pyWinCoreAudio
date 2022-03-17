@@ -127,8 +127,11 @@ class EndpointChannelVolume(object):
 
         # noinspection PyProtectedMember
         peaks = list(endpoint_volume._peak_meter)
-        if peaks:
+        try:
             return peaks[self.channel_number]
+        except IndexError:
+            pass
+
         return -1.0
 
     @property

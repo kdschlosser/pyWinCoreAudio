@@ -154,8 +154,6 @@ class IAudioSessionEvents(comtypes.COMObject):
         comtypes.COMObject.__init__(self)
 
     def OnDisplayNameChanged(self, NewDisplayName, _):
-        print('OnDisplayNameChanged')
-
         NewDisplayName = utils.convert_to_string(NewDisplayName)
 
         ON_SESSION_NAME_CHANGED.signal(
@@ -171,8 +169,6 @@ class IAudioSessionEvents(comtypes.COMObject):
         return S_OK
 
     def OnIconPathChanged(self, NewIconPath, _):
-        print('OnIconPathChanged')
-
         NewIconPath = utils.convert_to_string(NewIconPath)
         ON_SESSION_ICON_CHANGED.signal(
             device=self.__endpoint.device,
@@ -186,22 +182,22 @@ class IAudioSessionEvents(comtypes.COMObject):
         return S_OK
 
     def OnSimpleVolumeChanged(self, NewVolume, NewMute, _):
-        print('OnSimpleVolumeChanged')
-
         if (NewVolume, NewMute) != self.__last_volume_notification:
             self.__last_volume_notification = (NewVolume, NewMute)
+
+            endpoint_volume = self.__endpoint.volume.level
+            new_volume = NewVolume * endpoint_volume
+
             ON_SESSION_VOLUME_CHANGED.signal(
                 device=self.__endpoint.device,
                 endpoint=self.__endpoint,
                 session=self.__session,
-                new_volume=NewVolume * 100.0,
+                new_volume=new_volume,
                 new_mute=NewMute
             )
         return S_OK
 
     def OnChannelVolumeChanged(self, _, NewChannelVolumeArray, ChangedChannel, __):
-        print('OnChannelVolumeChanged')
-
         vol = NewChannelVolumeArray[ChangedChannel]
         ON_SESSION_CHANNEL_VOLUME_CHANGED.signal(
             device=self.__endpoint.device,
@@ -213,8 +209,6 @@ class IAudioSessionEvents(comtypes.COMObject):
         return S_OK
 
     def OnGroupingParamChanged(self, NewGroupingParam, _):
-        print('OnGroupingParamChanged')
-
         ON_SESSION_GROUPING_CHANGED.signal(
             device=self.__endpoint.device,
             endpoint=self.__endpoint,
@@ -224,8 +218,6 @@ class IAudioSessionEvents(comtypes.COMObject):
         return S_OK
 
     def OnStateChanged(self, NewState, _):
-        print('OnStateChanged')
-
         NewState = AudioSessionState.get(NewState)
         ON_SESSION_STATE_CHANGED.signal(
             device=self.__endpoint.device,
@@ -236,8 +228,6 @@ class IAudioSessionEvents(comtypes.COMObject):
         return S_OK
 
     def OnSessionDisconnected(self, DisconnectReason, _):
-        print('OnSessionDisconnected')
-
         DisconnectReason = AudioSessionDisconnectReason.get(DisconnectReason)
         ON_SESSION_DISCONNECT.signal(
             device=self.__endpoint.device,
@@ -385,15 +375,22 @@ class IAudioSessionControl(comtypes.IUnknown):
         name = name.strip()
 
         if not name:
-            try:
-                id_ = self.id
-            except AttributeError:
-                pass
-            else:
-                id_ = id_.rsplit('%b', 1)[0]
-                id_ = id_.rsplit('\\', 1)[-1]
-                name = id_.split('.', 1)[0]
 
+            try:
+                name = _get_process_name(self.process_id)
+            except NotImplementedError:
+                name = None
+
+            if name is None:
+                name = ''
+                try:
+                    id_ = self.id
+                except AttributeError:
+                    pass
+                else:
+                    id_ = id_.rsplit('%b', 1)[0]
+                    id_ = id_.rsplit('\\', 1)[-1]
+                    name = id_.split('.', 1)[0]
         return name
 
     @name.setter
@@ -827,3 +824,58 @@ class IAudioSessionManager2(IAudioSessionManager):
 
 # noinspection PyTypeChecker
 PIAudioSessionManager2 = POINTER(IAudioSessionManager2)
+
+
+# DWORD GetProcessImageFileNameW(
+#   [in]  HANDLE hProcess,
+#   [out] LPWSTR lpImageFileName,
+#   [in]  DWORD  nSize
+# );
+
+_kernel32 = ctypes.windll.Kernel32
+_psapi = ctypes.windll.Psapi
+
+_GetProcessImageFileNameW = _psapi.GetProcessImageFileNameW
+_GetProcessImageFileNameW.rstype = DWORD
+
+# HANDLE OpenProcess(
+#   [in] DWORD dwDesiredAccess,
+#   [in] BOOL  bInheritHandle,
+#   [in] DWORD dwProcessId
+# );
+_OpenProcess = _kernel32.OpenProcess
+_OpenProcess.restype = HANDLE
+
+# BOOL CloseHandle(
+#   [in] HANDLE hObject
+# );
+
+_CloseHandle = _kernel32.CloseHandle
+_CloseHandle.restype = BOOL
+
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+import os
+
+
+def _get_process_name(id_):
+    hprocess = _OpenProcess(
+        DWORD(PROCESS_QUERY_LIMITED_INFORMATION),
+        BOOL(1),
+        DWORD(id_)
+    )
+
+    buf = ctypes.create_unicode_buffer(255)
+
+    _GetProcessImageFileNameW(
+        HANDLE(hprocess),
+        buf,
+        DWORD(255)
+    )
+
+    _CloseHandle(HANDLE(hprocess))
+
+    value = buf.value
+
+    if value:
+        return os.path.split(os.path.splitext(value)[0])[-1]

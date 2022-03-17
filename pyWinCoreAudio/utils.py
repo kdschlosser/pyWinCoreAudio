@@ -49,15 +49,20 @@ RT_HTML = 23
 
 def convert_to_string(data):
     if not isinstance(data, str):
-        dta = ''
+        count = 0
 
-        try:
-            for d in data:
-                if d == '\x00':
-                    break
-                dta += d
-        except ValueError:
-            pass
+        chars = []
+        while True:
+            char = data[count]
+            if isinstance(char, int) and char == 0x00:
+                dta = bytearray(chars).decode('utf-8')
+                break
+            elif isinstance(char, str) and char == '\x00':
+                dta = ''.join(chars)
+                break
+
+            chars += [char]
+            count += 1
 
         data = dta
 
@@ -141,3 +146,46 @@ def get_icon(icon):
     except comtypes.COMError:
         import traceback
         traceback.print_exc()
+
+
+def remap(value, old_min, old_max, new_min, new_max):
+    if (
+            isinstance(value, float) or
+            isinstance(old_min, float) or
+            isinstance(old_max, float) or
+            isinstance(new_min, float) or
+            isinstance(new_max, float)
+    ):
+        type_ = float
+
+    else:
+        type_ = int
+
+    value = type_(value)
+    old_min = type_(old_min)
+    old_max = type_(old_max)
+    new_max = type_(new_max)
+    new_min = type_(new_min)
+
+    old_range = old_max - old_min  # type: ignore
+    new_range = new_max - new_min  # type: ignore
+
+    if old_range == 0:
+        raise ValueError('Input range ({}-{}) is empty'.format(
+            old_min, old_max))
+
+    if new_range == 0:
+        raise ValueError('Output range ({}-{}) is empty'.format(
+            new_min, new_max))
+
+    new_value = (value - old_min) * new_range  # type: ignore
+
+    if type_ == int:
+        new_value //= old_range  # type: ignore
+    else:
+        new_value /= old_range  # type: ignore
+
+    new_value += new_min  # type: ignore
+
+    return new_value
+

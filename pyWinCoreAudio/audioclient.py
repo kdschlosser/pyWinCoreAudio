@@ -420,6 +420,16 @@ class IAudioRenderClient(comtypes.IUnknown):
 PIAudioRenderClient = POINTER(IAudioRenderClient)
 
 
+def logger(func):
+
+    def wrapper(*args, **kwargs):
+
+        # print('DEBUG: ', func.__name__)
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 class ISimpleAudioVolume(comtypes.IUnknown):
     """Volume control for an audio session"""
     _case_insensitive_ = False
@@ -463,16 +473,17 @@ class ISimpleAudioVolume(comtypes.IUnknown):
         return int(self.level)
 
     def __init__(self):
-        self.__session = None
-        self.__channel_volumes = []
+        self._session = None
+        self._channel_volumes = []
         comtypes.IUnknown.__init__(self)
 
+    @logger
     def __call__(self, session):
-        self.__session = session
+        self._session = session
 
         channel_audio_volume = session.QueryInterface(IChannelAudioVolume)
         for vol in channel_audio_volume:
-            self.__channel_volumes.append(vol)
+            self._channel_volumes.append(vol)
 
         return self
 
@@ -484,24 +495,23 @@ class ISimpleAudioVolume(comtypes.IUnknown):
         # noinspection PyUnresolvedReferences
         vol = self.GetMasterVolume()
 
-        endpoint_volume = self.__session.endpoint.volume.level
+        endpoint_volume = self._session.endpoint.volume.level
         return vol * endpoint_volume
 
     @level.setter
     def level(self, value: float):
         # noinspection PyUnresolvedReferences
 
-        endpoint_volume = self.__session.endpoint.volume.level
+        endpoint_volume = self._session.endpoint.volume.level
 
-        print('endpoint volume:', endpoint_volume)
+        # print('endpoint volume:', endpoint_volume)
 
         if value > endpoint_volume:
-            self.__session.endpoint.volume.level = value
+            self._session.endpoint.volume.level = value
 
         new_volume = remap(value, 0.0, endpoint_volume, 0.0, 100.0)
         self.SetMasterVolume(FLOAT(new_volume / 100.0), NULL)
-        print('new session volume:', new_volume)
-
+        # print('new session volume:', new_volume)
 
     @property
     def mute(self) -> bool:
@@ -521,7 +531,7 @@ class ISimpleAudioVolume(comtypes.IUnknown):
         """
         Channel Volumes
         """
-        for vol in self.__channel_volumes:
+        for vol in self._channel_volumes:
             yield vol
 
 
@@ -595,11 +605,16 @@ class ChannelAudioVolume(object):
         """
         Get/Set the channel volume for a session
         """
-        return self.__channel_audio_volume.GetChannelVolume(self.__channel_number) * 100.0
+        return self.__channel_audio_volume.GetChannelVolume(
+            self.__channel_number
+        ) * 100.0
 
     @level.setter
     def level(self, value: float):
-        self.__channel_audio_volume.SetChannelVolume(self.__channel_number, FLOAT(value / 100.0))
+        self.__channel_audio_volume.SetChannelVolume(
+            self.__channel_number,
+            FLOAT(value / 100.0)
+        )
 
 
 class IChannelAudioVolume(comtypes.IUnknown):

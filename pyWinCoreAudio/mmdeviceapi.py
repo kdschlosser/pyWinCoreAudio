@@ -20,6 +20,7 @@ from .data_types import *
 import ctypes
 import comtypes
 from comtypes import CoClass
+from typing import Union
 from . import utils
 from .ksproxy import IKsControl
 from .endpointvolumeapi import (
@@ -45,11 +46,13 @@ from .dsound import (
     DS3DALG_HRTF_FULL,
     DS3DALG_HRTF_LIGHT
 )
-from .propertystore import (
+from .propsys import (
     PROPERTYKEY,
-    PIPropertyStore,
-    PPROPVARIANT
+    PIPropertyStore
 )
+
+from .propidl import PPROPVARIANT
+
 from .constant import (
     S_OK,
     STGM_READ,
@@ -205,11 +208,8 @@ DEVICE_STATE_MASK_ALL = 0x0000000F
 ENDPOINT_SYSFX_ENABLED = 0x00000000
 ENDPOINT_SYSFX_DISABLED = 0x00000001
 
+from . import policyconfig  # NOQA
 
-from .policyconfig import (
-    CLSID_PolicyConfigVistaClient,
-    IPolicyConfigVista
-)  # NOQA
 from .audioclient import IAudioClient  # NOQA
 from .devicetopologyapi import (
     IDeviceTopology,
@@ -232,6 +232,8 @@ from .devicetopologyapi import (
 
 
 _CoTaskMemFree = ctypes.windll.ole32.CoTaskMemFree
+
+
 
 
 class _IMMNotificationClient(comtypes.IUnknown):
@@ -288,7 +290,7 @@ class IMMNotificationClient(comtypes.COMObject):
         comtypes.COMObject.__init__(self)
 
     def OnDeviceStateChanged(self, pwstrDeviceId, dwNewState):
-        print('OnDeviceStateChanged')
+        # print('OnDeviceStateChanged')
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
         def _do(dev_id, new_state):
@@ -306,12 +308,19 @@ class IMMNotificationClient(comtypes.COMObject):
 
             for device in self.__device_enum:
                 if device.id == dev_id:
-                    ON_DEVICE_STATE_CHANGED.signal(device=device, new_state=state)
+                    ON_DEVICE_STATE_CHANGED.signal(
+                        device=device,
+                        new_state=state
+                    )
                     break
 
                 for endpoint in device:
                     if endpoint.id == dev_id:
-                        ON_DEVICE_STATE_CHANGED.signal(device=device, endpoint=endpoint, new_state=state)
+                        ON_DEVICE_STATE_CHANGED.signal(
+                            device=device,
+                            endpoint=endpoint,
+                            new_state=state
+                        )
                         break
                 else:
                     continue
@@ -323,7 +332,7 @@ class IMMNotificationClient(comtypes.COMObject):
         return S_OK
 
     def OnDeviceAdded(self, pwstrDeviceId):
-        print('OnDeviceAdded')
+        # print('OnDeviceAdded')
 
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
@@ -338,7 +347,7 @@ class IMMNotificationClient(comtypes.COMObject):
         return S_OK
 
     def OnDeviceRemoved(self, pwstrDeviceId):
-        print('OnDeviceRemoved')
+        # print('OnDeviceRemoved')
 
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
@@ -379,8 +388,13 @@ class IMMNotificationClient(comtypes.COMObject):
                 flow=flw
             )
 
-        if (pwstrDefaultDeviceId, flow, role) not in self.__last_default_endpoint:
-            self.__last_default_endpoint.append((pwstrDefaultDeviceId, flow, role))
+        if (
+            (pwstrDefaultDeviceId, flow, role)
+            not in self.__last_default_endpoint
+        ):
+            self.__last_default_endpoint.append(
+                (pwstrDefaultDeviceId, flow, role)
+            )
             while len(self.__last_default_endpoint) > 3:
                 self.__last_default_endpoint.pop(0)
 
@@ -389,7 +403,7 @@ class IMMNotificationClient(comtypes.COMObject):
         return S_OK
 
     def OnPropertyValueChanged(self, pwstrDeviceId, key):
-        print('OnPropertyValueChanged')
+        # print('OnPropertyValueChanged')
 
         pwstrDeviceId = utils.convert_to_string(pwstrDeviceId)
 
@@ -402,7 +416,11 @@ class IMMNotificationClient(comtypes.COMObject):
 
                 for endpoint in device:
                     if endpoint.id == dev_id:
-                        ON_DEVICE_PROPERTY_CHANGED.signal(device=device, endpoint=endpoint, key=k)
+                        ON_DEVICE_PROPERTY_CHANGED.signal(
+                            device=device,
+                            endpoint=endpoint,
+                            key=k
+                        )
                         break
                 else:
                     continue
@@ -804,7 +822,15 @@ class Reverb(ChorusReverbBase):
 
 class EQBand(object):
 
-    def __init__(self, band, frequency, device, channel_num, device_topology, device_enum):
+    def __init__(
+        self,
+        band,
+        frequency,
+        device,
+        channel_num,
+        device_topology,
+        device_enum
+    ):
         self.__band = band
         self.__frequency = frequency
         self.__device = device
@@ -832,7 +858,9 @@ class EQBand(object):
             ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
             ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
             ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_NUM_EQ_BANDS
-            ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+            ksprop.NodeProperty.Property.Flags = (
+                KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+            )
             ksprop.Channel = self.__channel_num
 
             for subunit in self.__device.subunits:
@@ -887,7 +915,9 @@ class EQBand(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_NUM_EQ_BANDS
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+           KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -928,7 +958,9 @@ class EQBand(object):
 
             bValue[self.__band] = value
 
-            ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+            ksprop.NodeProperty.Property.Flags = (
+                KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+            )
             valueSize = ULONG(ctypes.sizeof(bValue))
 
             iks_control.KsProperty(
@@ -964,7 +996,9 @@ class Equalizer(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_NUM_EQ_BANDS
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1060,7 +1094,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS_BOOST
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1104,7 +1140,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS_BOOST
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1144,7 +1182,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_LOUDNESS
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
         for subunit in self.__device.subunits:
             part = subunit.part
@@ -1187,7 +1227,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_LOUDNESS
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1227,7 +1269,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_AGC
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
         for subunit in self.__device.subunits:
             part = subunit.part
@@ -1270,7 +1314,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_AGC
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1310,7 +1356,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1353,7 +1401,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_BASS
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1393,7 +1443,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_MID
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1436,7 +1488,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_MID
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1476,7 +1530,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_TREBLE
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
         for subunit in self.__device.subunits:
             part = subunit.part
@@ -1517,7 +1573,9 @@ class AudioChannel(object):
         ksprop = KSNODEPROPERTY_AUDIO_CHANNEL()
         ksprop.NodeProperty.Property.Set = KSPROPSETID_Audio
         ksprop.NodeProperty.Property.Id = KSPROPERTY_AUDIO_TREBLE
-        ksprop.NodeProperty.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        ksprop.NodeProperty.Property.Flags = (
+            KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY
+        )
         ksprop.Channel = self.__channel_num
 
         for subunit in self.__device.subunits:
@@ -1671,6 +1729,11 @@ class IMMDevice(comtypes.IUnknown):
         )
     )
 
+    def __init__(self):
+        self.__chorus = None
+        self.__reverb = None
+        super(IMMDevice, self).__init__()
+
     @property
     def audio_channels(self):
         channel_config = self.channel_config
@@ -1680,7 +1743,12 @@ class IMMDevice(comtypes.IUnknown):
         res = []
 
         for i in range(channel_config.num_channels):
-            audio_channel = AudioChannel(self.__device, i, self.__device_topology, self.__device_enum)
+            audio_channel = AudioChannel(
+                self.__device,
+                i,
+                self.__device_topology,
+                self.__device_enum
+            )
             res.append(audio_channel)
 
         return res
@@ -1688,14 +1756,22 @@ class IMMDevice(comtypes.IUnknown):
     @property
     def chorus(self):
         if self.__chorus is None:
-            self.__chorus = Chorus(self, self.__device_topology, self.__device_enum)
+            self.__chorus = Chorus(
+                self,
+                self.__device_topology,
+                self.__device_enum
+            )
 
         return self.__chorus
 
     @property
     def reverb(self):
         if self.__reverb is None:
-            self.__reverb = Reverb(self, self.__device_topology, self.__device_enum)
+            self.__reverb = Reverb(
+                self,
+                self.__device_topology,
+                self.__device_enum
+            )
 
         return self.__reverb
 
@@ -1989,25 +2065,26 @@ class IMMDevice(comtypes.IUnknown):
         """
         return self.get_property(PKEY_DeviceInterface_FriendlyName)
 
-    def get_property(self, key):
+    def get_property(self, key, propvar=False):
         """
         Internal Use
         """
         # noinspection PyUnresolvedReferences
         pStore = self.OpenPropertyStore(STGM_READ)
         try:
-            return pStore.GetValue(key)
+            return pStore.GetValue(key, propvar)
         except comtypes.COMError:
             raise AttributeError
 
-    def set_property(self, key, _):
+    def set_property(self, key, value, vt=None):
         """
         Internal use
         """
         # noinspection PyUnresolvedReferences
         pStore = self.OpenPropertyStore(STGM_WRITE)
+
         try:
-            return pStore.GetValue(key)
+            return pStore.SetValue(key, value, vt)
         except comtypes.COMError:
             raise AttributeError
 
@@ -2123,10 +2200,24 @@ class IMMDevice(comtypes.IUnknown):
         )
 
     @property
-    def system_effects(self) -> bool:
-        return bool(
-            self.get_property(PKEY_AudioEndpoint_Disable_SysFx)
+    def audio_enhancements_enabled(self) -> bool:
+        prop_var = self.get_property(
+            PKEY_AudioEndpoint_Disable_SysFx,
+            propvar=True
         )
+
+        return prop_var.ulVal == ENDPOINT_SYSFX_ENABLED
+
+    @audio_enhancements_enabled.setter
+    def audio_enhancements_enabled(self, value: bool):
+        from .propidl import VT_UI4
+
+        if value:
+            value = ENDPOINT_SYSFX_ENABLED
+        else:
+            value = ENDPOINT_SYSFX_DISABLED
+
+        self.set_property(PKEY_AudioEndpoint_Disable_SysFx, value, VT_UI4)
 
     @property
     def hdcp_capable(self) -> bool:
@@ -2393,8 +2484,7 @@ class IMMDevice(comtypes.IUnknown):
         self.__device_topology = device_topology(endpoint=self)
         self.__chorus = None
         self.__reverb = None
-        self.__device_enum = device._Device__device_enum
-
+        self.__device_enum = device._Device__device_enum  # NOQA
 
         session_manager = self.activate(IAudioSessionManager2)
         if not session_manager:
@@ -2449,8 +2539,8 @@ class IMMDevice(comtypes.IUnknown):
 
     def set_default(self, role):
         policy_config = comtypes.CoCreateInstance(
-            CLSID_PolicyConfigVistaClient,
-            IPolicyConfigVista,
+            policyconfig.CLSID_PolicyConfigClient,
+            policyconfig.IPolicyConfig,
             comtypes.CLSCTX_ALL
         )
 
@@ -2458,7 +2548,25 @@ class IMMDevice(comtypes.IUnknown):
 
     @property
     def is_default(self) -> bool:
-        return IMMDeviceEnumerator.default_audio_endpoint(self.data_flow, self.data_flow) == self
+        for role in (
+            ERole.eMultimedia,
+            ERole.eConsole,
+            ERole.eCommunications
+        ):
+            if self.is_default_endpoint(role):
+                return True
+
+        return False
+
+    def is_default_endpoint(
+        self,
+        role: Union[ERole, str] = ERole.eMultimedia
+    ) -> bool:
+
+        return IMMDeviceEnumerator.default_audio_endpoint(
+            self.data_flow,
+            ERole.get(role)
+        ) == self
 
     def __iter__(self):
         """
@@ -2623,14 +2731,18 @@ class IMMDeviceEnumerator(object):
             )
 
             self.__notification_client = IMMNotificationClient(self)
-            self._device_enum.RegisterEndpointNotificationCallback(self.__notification_client)
+            self._device_enum.RegisterEndpointNotificationCallback(
+                self.__notification_client
+            )
 
         else:
             self.__dict__.update(IMMDeviceEnumerator._instance.__dict__)
 
     def __del__(self):
         if self.__notification_client is not None:
-            self._device_enum.UnregisterEndpointNotificationCallback(self.__notification_client)
+            self._device_enum.UnregisterEndpointNotificationCallback(
+                self.__notification_client
+            )
             self.__notification_client = None
 
         IMMDeviceEnumerator._instance = None
@@ -2650,6 +2762,98 @@ class IMMDeviceEnumerator(object):
             for endpoint in device:
                 if endpoint.id == id_:
                     return endpoint
+
+
+class __MIDL___MIDL_itf_mmdeviceapi_0000_0008_0002(ENUM):
+    AUDIO_SYSTEMEFFECTS_PROPERTYSTORE_TYPE_DEFAULT = 0
+    AUDIO_SYSTEMEFFECTS_PROPERTYSTORE_TYPE_USER = 1
+    AUDIO_SYSTEMEFFECTS_PROPERTYSTORE_TYPE_VOLATILE = 2
+    AUDIO_SYSTEMEFFECTS_PROPERTYSTORE_TYPE_ENUM_COUNT = (
+        AUDIO_SYSTEMEFFECTS_PROPERTYSTORE_TYPE_VOLATILE + 1
+    )
+
+
+AUDIO_SYSTEMEFFECTS_PROPERTYSTORE_TYPE = (
+    __MIDL___MIDL_itf_mmdeviceapi_0000_0008_0002
+)
+
+
+IID_IAudioSystemEffectsPropertyChangeNotificationClient = IID(
+    '{20049D40-56D5-400E-A2EF-385599FEED49}'
+)
+
+
+class IAudioSystemEffectsPropertyChangeNotificationClient(comtypes.IUnknown):
+    _case_insensitive_ = False
+    _iid_ = IID_IAudioSystemEffectsPropertyChangeNotificationClient
+    _methods_ = (
+        COMMETHOD(
+            [],
+            HRESULT,
+            'OnPropertyChanged',
+            (['in'], AUDIO_SYSTEMEFFECTS_PROPERTYSTORE_TYPE, 'type'),
+            (['in'], PROPERTYKEY, 'key')
+        ),
+    )
+
+
+IID_IAudioSystemEffectsPropertyStore = IID(
+    '{302AE7F9-D7E0-43E4-971B-1F8293613D2A}'
+)
+
+
+class IAudioSystemEffectsPropertyStore(comtypes.IUnknown):
+    _case_insensitive_ = False
+    _iid_ = IID_IAudioSystemEffectsPropertyStore
+    _methods_ = (
+        COMMETHOD(
+            [],
+            HRESULT,
+            'OpenDefaultPropertyStore',
+            (['in'], DWORD, 'stgmAccess'),
+            (['out'], POINTER(PIPropertyStore), 'propStore')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'OpenUserPropertyStore',
+            (['in'], DWORD, 'stgmAccess'),
+            (['out'], POINTER(PIPropertyStore), 'propStore')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'OpenVolatilePropertyStore',
+            (['in'], DWORD, 'stgmAccess'),
+            (['out'], POINTER(PIPropertyStore), 'propStore')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'ResetUserPropertyStore'
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'ResetVolatilePropertyStore'
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'RegisterPropertyChangeNotification',
+            (['in'],
+             POINTER(IAudioSystemEffectsPropertyChangeNotificationClient),
+             'callback')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'UnregisterPropertyChangeNotification',
+            (['in'],
+             POINTER(IAudioSystemEffectsPropertyChangeNotificationClient),
+             'callback')
+        )
+    )
 
 
 class MMDeviceAPILib(object):

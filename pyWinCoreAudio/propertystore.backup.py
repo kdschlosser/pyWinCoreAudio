@@ -899,6 +899,15 @@ PPROPVARIANT = POINTER(PROPVARIANT)
 
 class IPropertyStore(_IPropertyStore):
 
+    def SetValue(self, key, value):
+
+        'SetValue',
+        (['in'], POINTER(PROPERTYKEY), 'key'),
+        (['in'], POINTER(tag_inner_PROPVARIANT), 'propvar')
+
+
+
+
     def GetValue(self, key):
         # noinspection PyUnresolvedReferences
         value = _IPropertyStore.GetValue(self, key)

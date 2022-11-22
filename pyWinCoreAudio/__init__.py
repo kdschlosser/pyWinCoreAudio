@@ -51,7 +51,6 @@ from .signal import (
 
 _device_enumerator = None
 
-
 def devices(message=True):
     if message:
         print(

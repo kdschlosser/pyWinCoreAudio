@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-import ctypes
+import ctypes.wintypes
 import comtypes
-from .data_types import POINTER, ULONG
+import ctypes
 
 
 # noinspection PyTypeChecker,PyCallingNonCallable
@@ -116,12 +116,12 @@ def MIDL_INTERFACE(g):
     return GUID(g)
 
 
-LPGUID = POINTER(GUID)
-LPCGUID = POINTER(GUID)
+LPGUID = ctypes.POINTER(GUID)
+LPCGUID = ctypes.POINTER(GUID)
 
 
 IID = GUID
-LPIID = POINTER(IID)
+LPIID = ctypes.POINTER(IID)
 IID_NULL = GUID()
 
 
@@ -130,7 +130,7 @@ def IsEqualIID(riid1, riid2):
 
 
 CLSID = GUID
-LPCLSID = POINTER(CLSID)
+LPCLSID = ctypes.POINTER(CLSID)
 CLSID_NULL = GUID()
 
 
@@ -139,7 +139,7 @@ def IsEqualCLSID(rclsid1, rclsid2):
 
 
 FMTID = GUID
-LPFMTID = POINTER(FMTID)
+LPFMTID = ctypes.POINTER(FMTID)
 FMTID_NULL = GUID()
 
 
@@ -203,15 +203,57 @@ def DECLSPEC_UUID(guid):
     return GUID(guid)
 
 
-class _tagPROPERTYKEY(ctypes.Structure):
+class PropertyKeyMeta(type(ctypes.Structure)):
+    _keys = {}
+
+    def __init__(cls, name, bases, dct):
+        super(PropertyKeyMeta, cls).__init__(name, bases, dct)
+        setattr(cls, '_keys', PropertyKeyMeta._keys)
+
+    def __call__(cls, *args, **kwargs):
+        self = super(PropertyKeyMeta, cls).__call__(*args, **kwargs)
+        key = (str(self.fmtid), self.pid)
+
+        if key == ('{00000000-0000-0000-0000-000000000000}', 0):
+            return self
+
+        if key not in PropertyKeyMeta._keys:
+            PropertyKeyMeta._keys[key] = self
+
+        return PropertyKeyMeta._keys[key]
+
+
+class _tagPROPERTYKEY(ctypes.Structure, metaclass=PropertyKeyMeta):
+    _keys = {}
+
     _fields_ = [
         ('fmtid', GUID),
-        ('pid', ULONG),
+        ('pid', ctypes.wintypes.ULONG),
     ]
+
+    def __eq__(self, other):
+        if not isinstance(other, _tagPROPERTYKEY):
+            return False
+
+        return (
+            str(other.fmtid) == str(self.fmtid) and
+            other.pid == self.pid
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __str__(self):
+        key = (str(self.fmtid), self.pid)
+
+        if key in self._keys:
+            return str(self._keys[key])
+
+        return 'PROPERTYKEY(' + str(self.fmtid) + ', ' + str(self.pid) + ')'
 
 
 PROPERTYKEY = _tagPROPERTYKEY
-PPROPERTYKEY = POINTER(PROPERTYKEY)
+PPROPERTYKEY = ctypes.POINTER(PROPERTYKEY)
 
 
 def DEFINE_PROPERTYKEY(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8, key):

@@ -27,7 +27,6 @@ VARIANT = comtypes.automation.VARIANT
 VARTYPE = comtypes.automation.VARTYPE
 LPVARTYPE = POINTER(VARTYPE)
 
-
 if sys.maxsize > 2**32:
     LONG_PTR = ctypes.c_int64
     LPARAM = ctypes.c_int64
@@ -91,6 +90,7 @@ LPVOID = ctypes.c_void_p
 LPCVOID = ctypes.c_void_p
 
 BOOL = ctypes.c_int
+BOOLEAN = ctypes.c_byte
 WINBOOL = BOOL
 VARIANT_BOOL = ctypes.c_short
 LPBOOL = POINTER(BOOL)
@@ -109,6 +109,8 @@ WCHAR = ctypes.c_wchar
 PWCHAR = POINTER(WCHAR)
 LPWCHAR = POINTER(WCHAR)
 
+PCNZWCH = POINTER(WCHAR)
+
 OLECHAR = ctypes.c_wchar
 BSTR = POINTER(OLECHAR)
 LPBSTR = POINTER(BSTR)
@@ -121,6 +123,12 @@ LPCWSTR = POINTER(WCHAR)
 LPCSTR = ctypes.c_char_p
 LPWSTR = POINTER(WCHAR)
 LPSTR = POINTER(CHAR)
+PCWSTR = POINTER(WCHAR)
+
+LPOLESTR = LPSTR
+LPCOLESTR = LPCSTR
+
+SNB = POINTER(LPOLESTR)
 
 SCODE = ctypes.c_long
 
@@ -137,6 +145,123 @@ COLORREF = DWORD
 SIZE_T = ctypes.c_size_t
 
 ACCESS_MASK = DWORD
+
+IntPtr = ctypes.c_int64
+
+
+# HRESULT WindowsCreateString(
+#   PCNZWCH sourceString,
+#   UINT32  length,
+#   HSTRING *string
+# );
+
+_combase = ctypes.windll.Combase
+
+_WindowsCreateString = _combase.WindowsCreateString
+_WindowsCreateString.restype = HRESULT
+
+_WindowsGetStringLen = _combase.WindowsGetStringLen
+_WindowsGetStringLen.restype = UINT32
+
+# PCWSTR WindowsGetStringRawBuffer(
+#   HSTRING string,
+#   UINT32  *length
+# );
+_WindowsGetStringRawBuffer = _combase.WindowsGetStringRawBuffer
+_WindowsGetStringRawBuffer.restype = PCWSTR
+
+# HRESULT WindowsCreateStringReference(
+#   PCWSTR         sourceString,
+#   UINT32         length,
+#   HSTRING_HEADER *hstringHeader,
+#   HSTRING        *string
+# );
+
+_WindowsCreateStringReference = _combase.WindowsCreateStringReference
+_WindowsCreateStringReference.restype = HRESULT
+
+# HRESULT WindowsDeleteString(
+#   HSTRING string
+# );
+
+_WindowsDeleteString = _combase.WindowsDeleteString
+_WindowsDeleteString.restype = HRESULT
+
+
+# HRESULT WindowsPreallocateStringBuffer(
+#   UINT32         length,
+#   WCHAR          **charBuffer,
+#   HSTRING_BUFFER *bufferHandle
+# );
+_WindowsPreallocateStringBuffer = _combase.WindowsPreallocateStringBuffer
+_WindowsPreallocateStringBuffer.restype = HRESULT
+
+# HRESULT WindowsPromoteStringBuffer(
+#   HSTRING_BUFFER bufferHandle,
+#   HSTRING        *string
+# );
+_WindowsPromoteStringBuffer = _combase.WindowsPromoteStringBuffer
+_WindowsPromoteStringBuffer.restype = HRESULT
+HSTRING_BUFFER = HANDLE
+
+
+class HSTRING__(ctypes.Structure):
+    _fields_ = [
+        ('handle', IntPtr)
+    ]
+
+    @classmethod
+    def from_string(cls, string: str) -> "HSTRING__":
+        sourceString = (WCHAR * len(string))(*string)
+        length = UINT32(len(string))
+        string = cls()
+
+        _WindowsCreateString(
+            sourceString,
+            length,
+            ctypes.byref(string)
+        )
+
+        return string
+
+    def __str__(self):
+
+        if self.handle:
+            length = UINT32()
+            string = _WindowsGetStringRawBuffer(self, ctypes.byref(length))
+
+            res = ''
+            for i in range(length.value):
+                char = string[i]
+                if char == '\x00':
+                    res += ' '
+                else:
+                    res += char
+
+            return res
+
+        return ''
+
+    def __del__(self):
+        if self.handle:
+            _WindowsDeleteString(self)
+
+
+HSTRING = HSTRING__
+
+
+class HSTRING_HEADER(ctypes.Structure):
+    class _Reserved(ctypes.Union):
+        _fields_ = [
+            ('Reserved1', PVOID),
+            ('Reserved2', CHAR * 24)
+        ]
+
+    _anonymous_ = ('Reserved',)
+
+    _fields_ = [
+        ('Reserved', _Reserved)
+    ]
 
 
 class _FILETIME(ctypes.Structure):
@@ -206,15 +331,16 @@ ULARGE_INTEGER = _ULARGE_INTEGER
 # well mostly. I did give myself a way to also hard code the descriptions to
 # handle the oddities that occur.
 
-# I created a wraper around the `int` class that allows me to pass 2 arguments to the
-# constructor. the first argument is the integer and the second is the description string.
-# In python 2 this was easily accomplished by creating the wrapper and overriding the
-# __init__ method and calling super and only passing the integer to it. This cannot be
-# done in python 3 because the value does not get set in the __init__ method. It gets
-# set somewhere else, I have not been able to locate where. To fix that issue I created
-# a metaclass which sits in the middle. It intercepts the call to the __init__ method
-# and then create the class only passing the ineteger and set the description after the
-# instance has been created.
+# I created a wraper around the `int` class that allows me to pass 2 arguments
+# to the constructor. the first argument is the integer and the second is the
+# description string. In python 2 this was easily accomplished by creating the
+# wrapper and overriding the __init__ method and calling super and only passing
+# the integer to it. This cannot be done in python 3 because the value does not
+# get set in the __init__ method. It gets set somewhere else, I have not been
+# able to locate where. To fix that issue I created a metaclass which sits in
+# the middle. It intercepts the call to the __init__ method and then create the
+# class only passing the ineteger and set the description after the instance has
+# been created.
 class EnumValueMeta(type):
 
     def __call__(cls, value, description):
@@ -241,13 +367,15 @@ class ENUM_VALUE(int, metaclass=EnumValueMeta):
         return self.description
 
 
-# this is the voodoo magic part. The metaclass __init__ gets called when the class gets built
-# what is passed to the __init__ is the name of the class, bases (parent classes) and a dictonary
-# with the class attributes set in it. I am not able to place anything directly into the dictonary
-# nor can I create the class and then set anything in the classes dictonary. I can however use setattr
-# to set what I need to. I parse the class name and build a prefix if the prefix is found in the
-# begining of the attribute name I strip it off. Then I parse whatever is left over of the attribute
-# name to add spaces where they need to be added. place those into my fancy ENUM_VALUE class and attach
+# this is the voodoo magic part. The metaclass __init__ gets called when the
+# class gets built what is passed to the __init__ is the name of the class,
+# bases (parent classes) and a dictonary with the class attributes set in it.
+# I am not able to place anything directly into the dictonary nor can I create
+# the class and then set anything in the classes dictonary. I can however use
+# setattr to set what I need to. I parse the class name and build a prefix if
+# the prefix is found in the begining of the attribute name I strip it off.
+# Then I parse whatever is left over of the attribute name to add spaces where
+# they need to be added. place those into my fancy ENUM_VALUE class and attach
 # that instance to the attribute name using setattr.
 
 # after all is said and done this is the output

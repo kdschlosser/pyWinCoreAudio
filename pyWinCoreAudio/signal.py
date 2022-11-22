@@ -62,7 +62,7 @@ class Signal(object):
         else:
             for wcb in self._callbacks[:]:
                 cb = wcb()
-                if cb is None or cb == callback:
+                if cb is None or cb == callback or wcb == callback:
                     self._callbacks.remove(wcb)
 
     def signal(self, *args, **kwargs):
@@ -105,7 +105,7 @@ class SessionSignal(object):
     def unregister(self, callback):
         for key, wcb in list(self._callbacks.items())[:]:
             cb = wcb()
-            if cb is None or cb == callback:
+            if cb is None or cb == callback or wcb == callback:
                 del self._callbacks[key]
 
     def signal(self, device, endpoint, session, *args, **kwargs):
@@ -162,7 +162,7 @@ class EndpointSignal(object):
 
         for key, wcb in list(self._callbacks.items())[:]:
             cb = wcb()
-            if cb is None or cb == callback:
+            if cb is None or cb == callback or wcb == callback:
                 del self._callbacks[key]
 
     def signal(self, device, endpoint=None, *args, **kwargs):
@@ -209,7 +209,7 @@ class DeviceSignal(object):
     def unregister(self, callback):
         for key, wcb in list(self._callbacks.items())[:]:
             cb = wcb()
-            if cb is None or cb == callback:
+            if cb is None or cb == callback or wcb == callback:
                 del self._callbacks[key]
 
     def signal(self, device, *args, **kwargs):
@@ -261,7 +261,7 @@ class InterfaceSignal(object):
     def unregister(self, callback):
         for key, wcb in list(self._callbacks.items())[:]:
             cb = wcb()
-            if cb is None or cb == callback:
+            if cb is None or cb == callback or wcb == callback:
                 del self._callbacks[key]
 
     def signal(self, device, endpoint, interface, *args, **kwargs):

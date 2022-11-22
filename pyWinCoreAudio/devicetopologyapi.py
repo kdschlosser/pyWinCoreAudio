@@ -1552,7 +1552,7 @@ class IControlChangeNotify(comtypes.COMObject):
         comtypes.COMObject.__init__(self)
 
     def OnNotify(self, dwSenderProcessId):
-        print('IControlChangeNotify.OnNotify')
+        # print('IControlChangeNotify.OnNotify')
 
         ON_PART_CHANGE.signal(
             device=self.__endpoint.device,

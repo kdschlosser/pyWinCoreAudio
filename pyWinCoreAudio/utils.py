@@ -47,24 +47,37 @@ RT_ANIICON = 22
 RT_HTML = 23
 
 
-def convert_to_string(data):
+def convert_to_string(data, length=None):
     if not isinstance(data, str):
         count = 0
 
         chars = []
-        while True:
-            char = data[count]
-            if isinstance(char, int) and char == 0x00:
-                dta = bytearray(chars).decode('utf-8')
-                break
-            elif isinstance(char, str) and char == '\x00':
-                dta = ''.join(chars)
-                break
+        try:
+            while True:
+                char = data[count]
+                if length is None:
+                    if isinstance(char, int) and char == 0x00:
+                        dta = bytearray(chars).decode('utf-8')
+                        break
+                    elif isinstance(char, str) and char == '\x00':
+                        dta = ''.join(chars)
+                        break
+                elif length == count:
+                    chars += [char]
 
-            chars += [char]
-            count += 1
+                    if isinstance(char, int):
+                        dta = bytearray(chars).decode('utf-8')
+                        break
+                    else:
+                        dta = ''.join(chars)
+                        break
 
-        data = dta
+                chars += [char]
+                count += 1
+
+            data = dta
+        except ValueError:
+            return ''
 
     return data
 
@@ -188,4 +201,57 @@ def remap(value, old_min, old_max, new_min, new_max):
     new_value += new_min  # type: ignore
 
     return new_value
+
+
+# DWORD GetProcessImageFileNameW(
+#   [in]  HANDLE hProcess,
+#   [out] LPWSTR lpImageFileName,
+#   [in]  DWORD  nSize
+# );
+
+_kernel32 = ctypes.windll.Kernel32
+_psapi = ctypes.windll.Psapi
+
+_GetProcessImageFileNameW = _psapi.GetProcessImageFileNameW
+_GetProcessImageFileNameW.rstype = DWORD
+
+# HANDLE OpenProcess(
+#   [in] DWORD dwDesiredAccess,
+#   [in] BOOL  bInheritHandle,
+#   [in] DWORD dwProcessId
+# );
+_OpenProcess = _kernel32.OpenProcess
+_OpenProcess.restype = HANDLE
+
+# BOOL CloseHandle(
+#   [in] HANDLE hObject
+# );
+
+_CloseHandle = _kernel32.CloseHandle
+_CloseHandle.restype = BOOL
+
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+
+def get_process_name(id_):
+    hprocess = _OpenProcess(
+        DWORD(PROCESS_QUERY_LIMITED_INFORMATION),
+        BOOL(1),
+        DWORD(id_)
+    )
+
+    buf = ctypes.create_unicode_buffer(255)
+
+    _GetProcessImageFileNameW(
+        HANDLE(hprocess),
+        buf,
+        DWORD(255)
+    )
+
+    _CloseHandle(HANDLE(hprocess))
+
+    value = buf.value
+
+    if value:
+        return os.path.split(os.path.splitext(value)[0])[-1]
 

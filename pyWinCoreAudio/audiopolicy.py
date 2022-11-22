@@ -19,8 +19,9 @@
 from .data_types import *
 import comtypes
 from . import utils
-from .mmdeviceapi import IMMDevice
+from .mmdeviceapi import IMMDevice,  ERole, EDataFlow
 from .audioclient import PISimpleAudioVolume, ISimpleAudioVolume
+from .policyconfig import PolicyConfigClient
 from .constant import S_OK
 from .audiosessiontypes import (
     AudioSessionState,
@@ -147,7 +148,7 @@ class IAudioSessionEvents(comtypes.COMObject):
 
     def __init__(self, session, endpoint):
         self.__session = session
-        self.__endpoint = endpoint
+        self._endpoint = endpoint
         self.__session_name = session.name
         self.__session_icon = session.icon_path
         self.__last_volume_notification = (None, None)
@@ -157,8 +158,8 @@ class IAudioSessionEvents(comtypes.COMObject):
         NewDisplayName = utils.convert_to_string(NewDisplayName)
 
         ON_SESSION_NAME_CHANGED.signal(
-            device=self.__endpoint.device,
-            endpoint=self.__endpoint,
+            device=self._endpoint.device,
+            endpoint=self._endpoint,
             session=self.__session,
             old_name=self.__session_name,
             new_name=NewDisplayName
@@ -171,8 +172,8 @@ class IAudioSessionEvents(comtypes.COMObject):
     def OnIconPathChanged(self, NewIconPath, _):
         NewIconPath = utils.convert_to_string(NewIconPath)
         ON_SESSION_ICON_CHANGED.signal(
-            device=self.__endpoint.device,
-            endpoint=self.__endpoint,
+            device=self._endpoint.device,
+            endpoint=self._endpoint,
             session=self.__session,
             old_icon=self.__session_icon,
             new_icon=NewIconPath
@@ -185,23 +186,29 @@ class IAudioSessionEvents(comtypes.COMObject):
         if (NewVolume, NewMute) != self.__last_volume_notification:
             self.__last_volume_notification = (NewVolume, NewMute)
 
-            endpoint_volume = self.__endpoint.volume.level
+            endpoint_volume = self._endpoint.volume.level
             new_volume = NewVolume * endpoint_volume
 
             ON_SESSION_VOLUME_CHANGED.signal(
-                device=self.__endpoint.device,
-                endpoint=self.__endpoint,
+                device=self._endpoint.device,
+                endpoint=self._endpoint,
                 session=self.__session,
                 new_volume=new_volume,
                 new_mute=NewMute
             )
         return S_OK
 
-    def OnChannelVolumeChanged(self, _, NewChannelVolumeArray, ChangedChannel, __):
+    def OnChannelVolumeChanged(
+        self,
+        _,
+        NewChannelVolumeArray,
+        ChangedChannel,
+        __
+    ):
         vol = NewChannelVolumeArray[ChangedChannel]
         ON_SESSION_CHANNEL_VOLUME_CHANGED.signal(
-            device=self.__endpoint.device,
-            endpoint=self.__endpoint,
+            device=self._endpoint.device,
+            endpoint=self._endpoint,
             session=self.__session,
             channel=ChangedChannel,
             new_volume=vol * 100.0
@@ -210,8 +217,8 @@ class IAudioSessionEvents(comtypes.COMObject):
 
     def OnGroupingParamChanged(self, NewGroupingParam, _):
         ON_SESSION_GROUPING_CHANGED.signal(
-            device=self.__endpoint.device,
-            endpoint=self.__endpoint,
+            device=self._endpoint.device,
+            endpoint=self._endpoint,
             session=self.__session,
             new_grouping_param=NewGroupingParam.contents
         )
@@ -220,8 +227,8 @@ class IAudioSessionEvents(comtypes.COMObject):
     def OnStateChanged(self, NewState, _):
         NewState = AudioSessionState.get(NewState)
         ON_SESSION_STATE_CHANGED.signal(
-            device=self.__endpoint.device,
-            endpoint=self.__endpoint,
+            device=self._endpoint.device,
+            endpoint=self._endpoint,
             session=self.__session,
             new_state=NewState
         )
@@ -230,8 +237,8 @@ class IAudioSessionEvents(comtypes.COMObject):
     def OnSessionDisconnected(self, DisconnectReason, _):
         DisconnectReason = AudioSessionDisconnectReason.get(DisconnectReason)
         ON_SESSION_DISCONNECT.signal(
-            device=self.__endpoint.device,
-            endpoint=self.__endpoint,
+            device=self._endpoint.device,
+            endpoint=self._endpoint,
             name=self.__session_name,
             reason=DisconnectReason
         )
@@ -304,26 +311,26 @@ class IAudioSessionControl(comtypes.IUnknown):
     )
 
     def __init__(self):
-        self.__endpoint = None
-        self.__session_events = None
-        self.__session_manager = None
-        self.__volume = None
+        self._endpoint = None
+        self._session_events = None
+        self._session_manager = None
+        self._volume = None
         comtypes.IUnknown.__init__(self)
 
     def __call__(self, endpoint, session_manager):
-        self.__endpoint = endpoint
-        self.__session_manager = session_manager
+        self._endpoint = endpoint
+        self._session_manager = session_manager
 
-        if self.__session_events is None:
-            self.__session_events = IAudioSessionEvents(self, endpoint)
+        if self._session_events is None:
+            self._session_events = IAudioSessionEvents(self, endpoint)
             # noinspection PyUnresolvedReferences
-            self.RegisterAudioSessionNotification(self.__session_events)
+            self.RegisterAudioSessionNotification(self._session_events)
         return self
 
     def __del__(self):
-        if self.__session_events is not None:
+        if self._session_events is not None:
             # noinspection PyUnresolvedReferences
-            self.UnregisterAudioSessionNotification(self.__session_events)
+            self.UnregisterAudioSessionNotification(self._session_events)
 
     @property
     def state(self) -> ENUM_VALUE:
@@ -336,14 +343,18 @@ class IAudioSessionControl(comtypes.IUnknown):
 
     @property
     def session_manager(self):
-        return self.__session_manager
+        return self._session_manager
 
     @property
     def endpoint(self) -> IMMDevice:
         """
         Endpoint the session belongs to
         """
-        return self.__endpoint
+        return self._endpoint
+
+    @endpoint.setter
+    def endpoint(self, endpt):
+        pass
 
     @property
     def icon_path(self) -> str:
@@ -377,7 +388,7 @@ class IAudioSessionControl(comtypes.IUnknown):
         if not name:
 
             try:
-                name = _get_process_name(self.process_id)
+                name = utils.get_process_name(self.process_id)
             except NotImplementedError:
                 name = None
 
@@ -432,12 +443,12 @@ class IAudioSessionControl(comtypes.IUnknown):
 
     @property
     def volume(self):
-        if self.__volume is None:
+        if self._volume is None:
             vol = self.QueryInterface(ISimpleAudioVolume)
             if vol:
-                self.__volume = vol(self)
+                self._volume = vol(self)
 
-        return self.__volume
+        return self._volume
 
 
 # noinspection PyTypeChecker
@@ -465,8 +476,8 @@ class IAudioSessionNotification(comtypes.COMObject):
     _com_interfaces_ = [_IAudioSessionNotification]
 
     def __init__(self, session_manager, endpoint):
-        self.__session_manager = session_manager
-        self.__endpoint = endpoint
+        self._session_manager = session_manager
+        self._endpoint = endpoint
 
         comtypes.COMObject.__init__(self)
 
@@ -476,7 +487,7 @@ class IAudioSessionNotification(comtypes.COMObject):
             session_control2 = ns.QueryInterface(IAudioSessionControl2)
             if session_control2:
                 id_ = session_control2.instance_id
-                for session in self.__session_manager:
+                for session in self._session_manager:
                     if session.instance_id == id_:
                         break
 
@@ -484,8 +495,8 @@ class IAudioSessionNotification(comtypes.COMObject):
                     return
 
                 ON_SESSION_CREATED.signal(
-                    device=self.__endpoint.device,
-                    endpoint=self.__endpoint,
+                    device=self._endpoint.device,
+                    endpoint=self._endpoint,
                     session=session
                 )
 
@@ -524,7 +535,9 @@ class IAudioSessionEnumerator(comtypes.IUnknown):
 
             # noinspection PyUnresolvedReferences
             self.GetSession(INT(i), ctypes.byref(session_control))
-            session_control2 = session_control.QueryInterface(IAudioSessionControl2)
+            session_control2 = session_control.QueryInterface(
+                IAudioSessionControl2
+            )
             if session_control2:
                 session_control = session_control2
 
@@ -533,6 +546,16 @@ class IAudioSessionEnumerator(comtypes.IUnknown):
 
 # noinspection PyTypeChecker
 PIAudioSessionEnumerator = POINTER(IAudioSessionEnumerator)
+
+
+def logger(func):
+
+    def wrapper(*args, **kwargs):
+
+        # print('DEBUG: ', func.__name__)
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 class IAudioSessionControl2(IAudioSessionControl):
@@ -571,6 +594,77 @@ class IAudioSessionControl2(IAudioSessionControl):
     )
 
     @property
+    def endpoint(self):
+        return self._endpoint
+
+    @property
+    def default_endpoint(self) -> IMMDevice:
+        flows = [
+            EDataFlow.eRender,
+            EDataFlow.eCapture
+         ]
+        roles = [
+            ERole.eMultimedia,
+            ERole.eConsole,
+            ERole.eCommunications
+        ]
+
+        endpoint_ids = set()
+
+        policy_config_client = PolicyConfigClient()
+        process_id = self.process_id
+
+        for flow in flows:
+            for role in roles:
+                endpoint_id = policy_config_client.GetSessionDefaultEndPoint(
+                    flow,
+                    role,
+                    process_id
+                )
+                endpoint_ids.add(endpoint_id)
+
+        if self._endpoint.id in endpoint_ids:
+            return self._endpoint
+
+        from . import devices
+
+        for device in devices(False)():
+            for endpoint in device:
+                if endpoint.id in endpoint_ids:
+                    self._endpoint = endpoint
+                    return endpoint
+
+        return self._endpoint
+
+    @default_endpoint.setter
+    def default_endpoint(self, endpt: IMMDevice):
+        if endpt == self._endpoint:
+            return
+
+        roles = [
+            ERole.eMultimedia,
+            ERole.eConsole,
+            ERole.eCommunications
+        ]
+
+        p_client = PolicyConfigClient()
+        flow = endpt.data_flow
+        device_id = endpt.id
+        process_id = self.process_id
+
+        for role in roles:
+            p_client.SetSessionDefaultEndPoint(
+                device_id,
+                flow,
+                role,
+                process_id
+            )
+
+        if self.default_endpoint == endpt:
+            self._endpoint = endpt
+
+    @property
+    @logger
     def id(self) -> str:
         """
         Session id
@@ -593,6 +687,7 @@ class IAudioSessionControl2(IAudioSessionControl):
         return id_
 
     @property
+    @logger
     def process_id(self) -> int:
         """
         Process id
@@ -626,7 +721,10 @@ class IAudioSessionControl2(IAudioSessionControl):
         self._vol_duck = IAudioVolumeDuckNotification(endpoint)
 
         # noinspection PyUnresolvedReferences
-        session_manager.RegisterDuckNotification(self.GetSessionInstanceIdentifier(), self._vol_duck)
+        session_manager.RegisterDuckNotification(
+            self.GetSessionInstanceIdentifier(),
+            self._vol_duck
+        )
         return self
 
     def __del__(self):
@@ -664,11 +762,11 @@ class IAudioSessionManager(comtypes.IUnknown):
     )
 
     def __init__(self):
-        self.__endpoint = None
+        self._endpoint = None
         comtypes.IUnknown.__init__(self)
 
     def __call__(self, endpoint):
-        self.__endpoint = endpoint
+        self._endpoint = endpoint
         return self
 
     def __iter__(self):
@@ -775,11 +873,11 @@ class IAudioSessionManager2(IAudioSessionManager):
     def __init__(self):
         IAudioSessionManager.__init__(self)
         self.__session_notification = None
-        self.__endpoint = None
+        self._endpoint = None
         self.__sessions = {}
 
     def __call__(self, endpoint):
-        self.__endpoint = endpoint
+        self._endpoint = endpoint
         self.__session_notification = IAudioSessionNotification(self, endpoint)
 
         # noinspection PyUnresolvedReferences
@@ -809,10 +907,13 @@ class IAudioSessionManager2(IAudioSessionManager):
 
             for session in session_enum:
                 id_ = session.instance_id
+                if not id_:
+                    continue
+
                 session_ids.append(id_)
 
                 if id_ not in self.__sessions:
-                    self.__sessions[id_] = session(self.__endpoint, self)
+                    self.__sessions[id_] = session(self._endpoint, self)
 
             for id_ in list(self.__sessions.keys())[:]:
                 if id_ not in session_ids:
@@ -824,58 +925,3 @@ class IAudioSessionManager2(IAudioSessionManager):
 
 # noinspection PyTypeChecker
 PIAudioSessionManager2 = POINTER(IAudioSessionManager2)
-
-
-# DWORD GetProcessImageFileNameW(
-#   [in]  HANDLE hProcess,
-#   [out] LPWSTR lpImageFileName,
-#   [in]  DWORD  nSize
-# );
-
-_kernel32 = ctypes.windll.Kernel32
-_psapi = ctypes.windll.Psapi
-
-_GetProcessImageFileNameW = _psapi.GetProcessImageFileNameW
-_GetProcessImageFileNameW.rstype = DWORD
-
-# HANDLE OpenProcess(
-#   [in] DWORD dwDesiredAccess,
-#   [in] BOOL  bInheritHandle,
-#   [in] DWORD dwProcessId
-# );
-_OpenProcess = _kernel32.OpenProcess
-_OpenProcess.restype = HANDLE
-
-# BOOL CloseHandle(
-#   [in] HANDLE hObject
-# );
-
-_CloseHandle = _kernel32.CloseHandle
-_CloseHandle.restype = BOOL
-
-PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-
-import os
-
-
-def _get_process_name(id_):
-    hprocess = _OpenProcess(
-        DWORD(PROCESS_QUERY_LIMITED_INFORMATION),
-        BOOL(1),
-        DWORD(id_)
-    )
-
-    buf = ctypes.create_unicode_buffer(255)
-
-    _GetProcessImageFileNameW(
-        HANDLE(hprocess),
-        buf,
-        DWORD(255)
-    )
-
-    _CloseHandle(HANDLE(hprocess))
-
-    value = buf.value
-
-    if value:
-        return os.path.split(os.path.splitext(value)[0])[-1]

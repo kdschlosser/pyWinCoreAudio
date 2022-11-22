@@ -16,7 +16,28 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
-from .data_types import *
+
+from .guiddef import PROPERTYKEY as _PROPERTYKEY, GUID
+
+
+class PK(_PROPERTYKEY):
+    def __str__(self):
+        for name, pkey in globals().items():
+            if not name.startswith('PKEY_'):
+                continue
+
+            if (
+                    str(pkey.fmtid) == str(self.fmtid) and
+                    pkey.pid == self.pid
+            ):
+                return name
+
+        return _PROPERTYKEY.__str__(self)
+
+
+def DEFINE_PROPERTYKEY(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8, key):
+    return PK(GUID(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8), key)
+
 
 DEVPKEY_DeviceClass_IconPath = DEFINE_PROPERTYKEY(
     0x259abffc,

@@ -39,6 +39,9 @@ from pyWinCoreAudio import (
 )
 
 
+# spdif_endpoint = None
+
+
 def on_device_added(signal, device):
     print('Device added:', device.name)
 
@@ -52,10 +55,22 @@ def on_device_removed(signal, name):
 
 _on_device_removed = ON_DEVICE_REMOVED.register(on_device_removed)
 
+from pyWinCoreAudio.functiondiscoverykeys_devpkey import (
+    PKEY_AudioEndpoint_Disable_SysFx
+)
+
 
 def on_device_property_changed(signal, device, key, endpoint=None):
+    global audio_enhancements_endpoint
+
     if endpoint is not None:
-        print('Property changed:', device.name + '.' + endpoint.name, key)
+        if 'Speakers' in endpoint.name:
+            if key == PKEY_AudioEndpoint_Disable_SysFx:
+                value = endpoint.audio_enhancements_enabled
+                print('Property changed:', device.name + '.' + endpoint.name, key, '=', value)
+            else:
+                value = endpoint.get_property(key)
+                print('Property changed:', device.name + '.' + endpoint.name, key, '=', value)
 
     else:
         print('Property changed:', device.name, key)
@@ -145,10 +160,12 @@ _on_session_disconnect = ON_SESSION_DISCONNECT.register(on_session_disconnect)
 
 def on_session_volume_changed(signal, device, endpoint, session, new_volume, new_mute):
     print('Session volume changed:', device.name + '.' + endpoint.name + '.' + session.name, 'volume:', new_volume, 'mute:', new_mute)
-    if new_volume <= 15.0:
-        print('setting session volume', session.volume.level)
-        session.volume.level = 50.0
-        print('new session volume =', session.volume.level)
+
+    #
+    # if new_volume <= 15.0:
+    #     print('setting session volume', session.volume.level)
+    #     session.volume.level = 50.0
+    #     print('new session volume =', session.volume.level)
 
 
 _on_session_volume_changed = ON_SESSION_VOLUME_CHANGED.register(on_session_volume_changed)
@@ -181,6 +198,9 @@ for device in devices():
     print(device.name)
     print('    endpoints:')
     for endpoint in device:
+        # if 'SPDIF' in endpoint.name:
+        #     spdif_endpoint = endpoint
+
         print('        endpoint:', endpoint.name)
         print('        description:', endpoint.description)
         print('        type:', endpoint.type)
@@ -189,7 +209,7 @@ for device in devices():
         print('        full_range_speakers:', endpoint.full_range_speakers)
         print('        guid:', endpoint.guid)
         print('        physical_speakers:', endpoint.physical_speakers)
-        print('        system_effects:', endpoint.system_effects)
+        print('        audio_enhancements_enabled:', endpoint.audio_enhancements_enabled)
         print('        hdcp_capable:', endpoint.hdcp_capable)
         print('        ai_capable:', endpoint.ai_capable)
         print('        connector_type:', endpoint.connector_type)
@@ -253,9 +273,21 @@ for device in devices():
                     print('            volume:', channel.level)
                     print()
             del volume
-            del session
 
             print()
+
+            # If you want to change the session (application) endpoint
+            # this is how you would go about doing it
+
+            # if session.name == 'Mozilla Firefox':
+            #     for edpt in device:
+            #         if 'SPDIF' in edpt.name:
+            #             session.default_endpoint = edpt
+            #             print('session.default_endpoint == edpt:', session.default_endpoint == edpt)
+            #
+            #         del edpt
+
+            del session
 
         del endpoint
 
@@ -296,6 +328,7 @@ event = threading.Event()
 
 try:
     event.wait()
+
 except KeyboardInterrupt:
     pass
 

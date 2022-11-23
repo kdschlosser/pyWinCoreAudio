@@ -92,7 +92,6 @@ LPCVOID = ctypes.c_void_p
 BOOL = ctypes.c_int
 BOOLEAN = ctypes.c_byte
 WINBOOL = BOOL
-VARIANT_BOOL = ctypes.c_short
 LPBOOL = POINTER(BOOL)
 
 UBYTE = ctypes.c_ubyte
@@ -203,6 +202,27 @@ _WindowsPreallocateStringBuffer.restype = HRESULT
 _WindowsPromoteStringBuffer = _combase.WindowsPromoteStringBuffer
 _WindowsPromoteStringBuffer.restype = HRESULT
 HSTRING_BUFFER = HANDLE
+
+
+class VARIANT_BOOL(ctypes.c_short):
+
+    @property
+    def value(self):
+        val = getattr(ctypes.c_short, 'value').__get__(self)
+        return val == -1
+
+    @value.setter
+    def value(self, val):
+        if val:
+            getattr(ctypes.c_short, 'value').__set__(self, -1)
+        else:
+            getattr(ctypes.c_short, 'value').__set__(self, 0)
+
+    def __bool__(self):
+        return self.value
+
+    def __str__(self):
+        return str(self.value)
 
 
 class HSTRING__(ctypes.Structure):

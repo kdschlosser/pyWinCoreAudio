@@ -61,13 +61,7 @@ from .constant import (
 from .functiondiscoverykeys_devpkey import (
     PKEY_DeviceInterface_FriendlyName,
     PKEY_Device_FriendlyName,
-    PKEY_Device_DeviceDesc,
-    PKEY_AudioEndpoint_FormFactor,
-    PKEY_AudioEndpoint_JackSubType,
-    PKEY_AudioEndpoint_FullRangeSpeakers,
-    PKEY_AudioEndpoint_GUID,
-    PKEY_AudioEndpoint_PhysicalSpeakers,
-    PKEY_AudioEndpoint_Disable_SysFx
+    PKEY_Device_DeviceDesc
 )
 from .ksmedia import (
     KSNODEPROPERTY_AUDIO_CHANNEL,
@@ -205,9 +199,6 @@ DEVICE_STATE_NOTPRESENT = 0x00000004
 DEVICE_STATE_UNPLUGGED = 0x00000008
 DEVICE_STATE_MASK_ALL = 0x0000000F
 
-ENDPOINT_SYSFX_ENABLED = 0x00000000
-ENDPOINT_SYSFX_DISABLED = 0x00000001
-
 from . import policyconfig  # NOQA
 
 from .audioclient import IAudioClient  # NOQA
@@ -234,6 +225,797 @@ from .devicetopologyapi import (
 _CoTaskMemFree = ctypes.windll.ole32.CoTaskMemFree
 
 
+from .guiddef import PROPERTYKEY as _PROPERTYKEY  # NOQA
+
+
+class PK(_PROPERTYKEY):
+    def __str__(self):
+        for name, pkey in globals().items():
+            if not name.startswith('PKEY_'):
+                continue
+
+            if (
+                    str(pkey.fmtid) == str(self.fmtid) and
+                    pkey.pid == self.pid
+            ):
+                return name
+
+        return _PROPERTYKEY.__str__(self)
+
+
+def DEFINE_PROPERTYKEY(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8, key):
+    return PK(GUID(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8), key)
+
+
+PKEY_AudioEndpoint_FormFactor = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    0
+)
+
+PKEY_AudioEndpoint_PhysicalSpeakers = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    3
+)
+
+PKEY_AudioEndpoint_GUID = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    4
+)
+
+PKEY_AudioEndpoint_Disable_SysFx = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    5
+)
+
+ENDPOINT_SYSFX_ENABLED = 0x00000000  # System Effects are enabled.
+ENDPOINT_SYSFX_DISABLED = 0x00000001  # System Effects are disabled.
+
+PKEY_AudioEndpoint_FullRangeSpeakers = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    6
+)
+
+PKEY_AudioEndpoint_JackSubType = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    8
+)
+
+PKEY_AudioEndpoint_ControlPanelPageProvider = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    1
+)
+
+PKEY_AudioEndpoint_Association = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    2
+)
+
+PKEY_AudioEndpoint_Supports_EventDriven_Mode = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    7
+)
+
+PKEY_AudioEndpoint_Default_VolumeInDb = DEFINE_PROPERTYKEY(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    9
+)
+
+PKEY_AudioEngine_DeviceFormat = DEFINE_PROPERTYKEY(
+    0xf19f064d,
+    0x82c,
+    0x4e27,
+    0xbc,
+    0x73,
+    0x68,
+    0x82,
+    0xa1,
+    0xbb,
+    0x8e,
+    0x4c,
+    0
+)
+
+PKEY_AudioEngine_OEMFormat = DEFINE_PROPERTYKEY(
+    0xe4870e26,
+    0x3cc5,
+    0x4cd2,
+    0xba,
+    0x46,
+    0xca,
+    0xa,
+    0x9a,
+    0x70,
+    0xed,
+    0x4,
+    3
+)
+
+PKEY_AudioEndpointLogo_IconEffects = DEFINE_PROPERTYKEY(
+    0xf1ab780d,
+    0x2010,
+    0x4ed3,
+    0xa3,
+    0xa6,
+    0x8b,
+    0x87,
+    0xf0,
+    0xf0,
+    0xc4,
+    0x76,
+    0
+)
+
+PKEY_AudioEndpointLogo_IconPath = DEFINE_PROPERTYKEY(
+    0xf1ab780d,
+    0x2010,
+    0x4ed3,
+    0xa3,
+    0xa6,
+    0x8b,
+    0x87,
+    0xf0,
+    0xf0,
+    0xc4,
+    0x76,
+    1
+)
+
+PKEY_AudioEndpointSettings_MenuText = DEFINE_PROPERTYKEY(
+    0x14242002,
+    0x0320,
+    0x4de4,
+    0x95,
+    0x55,
+    0xa7,
+    0xd8,
+    0x2b,
+    0x73,
+    0xc2,
+    0x86,
+    0
+)
+
+PKEY_AudioEndpointSettings_LaunchContract = DEFINE_PROPERTYKEY(
+    0x14242002,
+    0x0320,
+    0x4de4,
+    0x95,
+    0x55,
+    0xa7,
+    0xd8,
+    0x2b,
+    0x73,
+    0xc2,
+    0x86,
+    1
+)
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 0
+PKEY_SYSFX_Association = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    0
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 1
+PKEY_SYSFX_PreMixClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    1
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 2
+PKEY_SYSFX_PostMixClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    2
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 3
+PKEY_SYSFX_UiClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    3
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 5
+PKEY_SYSFX_StreamEffectClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    5
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 6
+PKEY_SYSFX_ModeEffectClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    6
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 7
+PKEY_SYSFX_EndpointEffectClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    7
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 196611
+PKEY_SYSFX_ChainClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    196611
+)
+# VT: None
+
+# {259abffc-50a7-47ce-af08-68c9a7d73366}, 12
+PKEY_AudioEndpoint_Icon = DEFINE_PROPERTYKEY(
+    0x259ABFFC,
+    0x50A7,
+    0x47CE,
+    0xAF,
+    0x08,
+    0x68,
+    0xC9,
+    0xA7,
+    0xD7,
+    0x33,
+    0x66,
+    12
+)
+# VT: None
+
+# {F3E80BEF-1723-4FF2-BCC4-7F83DC5E46D4}, 4
+PKEY_AudioDevice_EnableEndpointByDefault = DEFINE_PROPERTYKEY(
+    0xF3E80BEF,
+    0x1723,
+    0x4FF2,
+    0xBC,
+    0xC4,
+    0x7F,
+    0x83,
+    0xDC,
+    0x5E,
+    0x46,
+    0xD4,
+    4
+)
+# VT: None
+
+# {D3993A3F-99C2-4402-B5EC-A92A0367664B}, 1
+PKEY_LFX_ProcessingModes_Supported_For_Streaming = DEFINE_PROPERTYKEY(
+    0xD3993A3F,
+    0x99C2,
+    0x4402,
+    0xB5,
+    0xEC,
+    0xA9,
+    0x2A,
+    0x03,
+    0x67,
+    0x66,
+    0x4B,
+    1
+)
+# VT: None
+
+# {1da5d803-d492-4edd-8c23-e0c0ffee7f0e}, 3
+PKEY_AudioEngine_PhysicalSpeaker = DEFINE_PROPERTYKEY(
+    0x1DA5D803,
+    0xD492,
+    0x4EDD,
+    0x8C,
+    0x23,
+    0xE0,
+    0xC0,
+    0xFF,
+    0xEE,
+    0x7F,
+    0x0E,
+    3
+)
+# VT: None
+
+# {1da5d803-d492-4edd-8c23-e0c0ffee7f0e}, 6
+PKEY_AudioEngine_FullRangeSpeaker = DEFINE_PROPERTYKEY(
+    0x1DA5D803,
+    0xD492,
+    0x4EDD,
+    0x8C,
+    0x23,
+    0xE0,
+    0xC0,
+    0xFF,
+    0xEE,
+    0x7F,
+    0x0E,
+    6
+)
+# VT: None
+
+# {F1056047-B091-4d85-A5C0-B13D4D8BAC57}, 0
+PKEY_EFFECTNODEINFO_RENDER = DEFINE_PROPERTYKEY(
+    0xF1056047,
+    0xB091,
+    0x4D85,
+    0xA5,
+    0xC0,
+    0xB1,
+    0x3D,
+    0x4D,
+    0x8B,
+    0xAC,
+    0x57,
+    0
+)
+# VT: None
+
+# {F1056047-B091-4d85-A5C0-B13D4D8BAC57}, 1
+PKEY_EFFECTNODEINFO_CAPTURE = DEFINE_PROPERTYKEY(
+    0xF1056047,
+    0xB091,
+    0x4D85,
+    0xA5,
+    0xC0,
+    0xB1,
+    0x3D,
+    0x4D,
+    0x8B,
+    0xAC,
+    0x57,
+    1
+)
+# VT: None
+
+# {F5376650-918F-4cf4-91FB-D123CF4E1350}, 1
+PKEY_CTGUID = DEFINE_PROPERTYKEY(
+    0xF5376650,
+    0x918F,
+    0x4CF4,
+    0x91,
+    0xFB,
+    0xD1,
+    0x23,
+    0xCF,
+    0x4E,
+    0x13,
+    0x50,
+    1
+)
+# VT: None
+
+# {0D63112A-5B63-4087-9AE2-5AE185B79E43}, 0
+PKEY_CT_LINETOAUX_GUID = DEFINE_PROPERTYKEY(
+    0x0D63112A,
+    0x5B63,
+    0x4087,
+    0x9A,
+    0xE2,
+    0x5A,
+    0xE1,
+    0x85,
+    0xB7,
+    0x9E,
+    0x43,
+    0
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 3
+PKEY_FX_UiClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    3
+)
+# VT: None
+
+# {B725F130-47EF-101A-A5F1-02608C9EEBAC}, 10
+PKEY_ItemNameDisplay = DEFINE_PROPERTYKEY(
+    0xB725F130,
+    0x47EF,
+    0x101A,
+    0xA5,
+    0xF1,
+    0x02,
+    0x60,
+    0x8C,
+    0x9E,
+    0xEB,
+    0xAC,
+    10
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 1
+PKEY_FX_PreMixClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    1
+)
+# VT: None
+
+# {D04E05A6-594B-4FB6-A80D-01AF5EED7D1D}, 2
+PKEY_FX_PostMixClsid = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    2
+)
+# VT: None
+
+# {F3E80BEF-1723-4FF2-BCC4-7F83DC5E46D4}, 3
+PKEY_AudioDevice_NeverSetAsDefaultEndpoint = DEFINE_PROPERTYKEY(
+    0xF3E80BEF,
+    0x1723,
+    0x4FF2,
+    0xBC,
+    0xC4,
+    0x7F,
+    0x83,
+    0xDC,
+    0x5E,
+    0x46,
+    0xD4,
+    3
+)
+# VT: None
+
+# {D04E05A6-594B-4fb6-A80D-01AF5EED7D1D}, 13
+PKEY_Composite_SFX = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    13
+)
+# VT: None
+
+# {D04E05A6-594B-4fb6-A80D-01AF5EED7D1D}, 14
+PKEY_Composite_MFX = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    14
+)
+# VT: None
+
+# {D04E05A6-594B-4fb6-A80D-01AF5EED7D1D}, 15
+PKEY_Composite_EFX = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    15
+)
+# VT: None
+
+# {D04E05A6-594B-4fb6-A80D-01AF5EED7D1D}, 19
+PKEY_Composite_Offload_SFX = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    19
+)
+# VT: None
+
+# {D04E05A6-594B-4fb6-A80D-01AF5EED7D1D}, 20
+PKEY_Composite_Offload_MFX = DEFINE_PROPERTYKEY(
+    0xD04E05A6,
+    0x594B,
+    0x4FB6,
+    0xA8,
+    0x0D,
+    0x01,
+    0xAF,
+    0x5E,
+    0xED,
+    0x7D,
+    0x1D,
+    20
+)
+# VT: None
+
+# {1DA5D803-D492-4EDD-8C23-E0C0FFEE7F0E}, 1
+PKEY_AudioEndpoint_ControlPanelProvider = DEFINE_PROPERTYKEY(
+    0x1DA5D803,
+    0xD492,
+    0x4EDD,
+    0x8C,
+    0x23,
+    0xE0,
+    0xC0,
+    0xFF,
+    0xEE,
+    0x7F,
+    0x0E,
+    1
+)
+# VT: None
+
+# {1DA5D803-D492-4EDD-8C23-E0C0FFEE7F0E}, 1
+PKEY_AudioEndpoint_Ext_UiClsid = DEFINE_PROPERTYKEY(
+    0x1DA5D803,
+    0xD492,
+    0x4EDD,
+    0x8C,
+    0x23,
+    0xE0,
+    0xC0,
+    0xFF,
+    0xEE,
+    0x7F,
+    0x0E,
+    1
+)
+# VT: None
+
+# {A45C254E-DF1C-4EFD-8020-67D146A850E0}, 2
+PKEY_AudioEndpoint_Name = DEFINE_PROPERTYKEY(
+    0xA45C254E,
+    0xDF1C,
+    0x4EFD,
+    0x80,
+    0x20,
+    0x67,
+    0xD1,
+    0x46,
+    0xA8,
+    0x50,
+    0xE0,
+    2
+)
+# VT: None
+
+# {0F8412D3-DC5C-4DB3-B174-DC47A859435C}, 0
+PKEY_BYPASS_TP_EFFECTS = DEFINE_PROPERTYKEY(
+    0x0F8412D3,
+    0xDC5C,
+    0x4DB3,
+    0xB1,
+    0x74,
+    0xDC,
+    0x47,
+    0xA8,
+    0x59,
+    0x43,
+    0x5C,
+    0
+)
+# VT: None
 
 
 class _IMMNotificationClient(comtypes.IUnknown):
@@ -2064,6 +2846,22 @@ class IMMDevice(comtypes.IUnknown):
         Name of the device this endpoint belongs to
         """
         return self.get_property(PKEY_DeviceInterface_FriendlyName)
+
+    def get_properties(self):
+        pStore = self.OpenPropertyStore(STGM_READ)
+
+        count = pStore.GetCount()
+
+        for i in range(count):
+            p_key = pStore.GetAt(i)
+            print(p_key)
+            try:
+                prop_var = self.get_property(p_key, True)
+                print('prop VT:', prop_var.vt)
+            except:
+                print('no read permissions')
+
+            print()
 
     def get_property(self, key, propvar=False):
         """

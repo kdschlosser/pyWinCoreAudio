@@ -49,7 +49,100 @@ from .signal import (
     ON_PART_CHANGE
 )
 
+from .audioenginebaseapo import (
+    PKEY_FX_FriendlyName,
+    PKEY_FX_KeywordDetector_StreamEffectClsid,
+    PKEY_FX_KeywordDetector_ModeEffectClsid,
+    PKEY_FX_KeywordDetector_EndpointEffectClsid,
+    PKEY_FX_Offload_StreamEffectClsid,
+    PKEY_FX_Offload_ModeEffectClsid,
+    PKEY_CompositeFX_KeywordDetector_StreamEffectClsid,
+    PKEY_CompositeFX_KeywordDetector_ModeEffectClsid,
+    PKEY_CompositeFX_KeywordDetector_EndpointEffectClsid,
+    PKEY_SFX_ProcessingModes_Supported_For_Streaming,
+    PKEY_MFX_ProcessingModes_Supported_For_Streaming,
+    PKEY_EFX_ProcessingModes_Supported_For_Streaming,
+    PKEY_SFX_KeywordDetector_ProcessingModes_Supported_For_Streaming,
+    PKEY_MFX_KeywordDetector_ProcessingModes_Supported_For_Streaming,
+    PKEY_EFX_KeywordDetector_ProcessingModes_Supported_For_Streaming,
+    PKEY_SFX_Offload_ProcessingModes_Supported_For_Streaming,
+    PKEY_MFX_Offload_ProcessingModes_Supported_For_Streaming,
+    PKEY_APO_SWFallback_ProcessingModes
+)
+from .functiondiscoverykeys_devpkey import (
+    PKEY_Device_FriendlyName,
+    PKEY_Device_DeviceDesc,
+    PKEY_DeviceInterface_FriendlyName
+)
+from .mmdeviceapi import (
+    PKEY_AudioEndpoint_FormFactor,
+    PKEY_AudioEndpoint_PhysicalSpeakers,
+    PKEY_AudioEndpoint_GUID,
+    PKEY_AudioEndpoint_Disable_SysFx,
+    PKEY_AudioEndpoint_FullRangeSpeakers,
+    PKEY_AudioEndpoint_JackSubType,
+    PKEY_AudioEndpoint_ControlPanelPageProvider,
+    PKEY_AudioEndpoint_Association,
+    PKEY_AudioEndpoint_Supports_EventDriven_Mode,
+    PKEY_AudioEndpoint_Default_VolumeInDb,
+    PKEY_AudioEngine_DeviceFormat,
+    PKEY_AudioEngine_OEMFormat,
+    PKEY_AudioEndpointLogo_IconEffects,
+    PKEY_AudioEndpointLogo_IconPath,
+    PKEY_AudioEndpointSettings_MenuText,
+    PKEY_AudioEndpointSettings_LaunchContract,
+    PKEY_SYSFX_Association,
+    PKEY_SYSFX_PreMixClsid,
+    PKEY_SYSFX_PostMixClsid,
+    PKEY_SYSFX_UiClsid,
+    PKEY_SYSFX_StreamEffectClsid,
+    PKEY_SYSFX_ModeEffectClsid,
+    PKEY_SYSFX_EndpointEffectClsid,
+    PKEY_SYSFX_ChainClsid,
+    PKEY_AudioEndpoint_Icon,
+    PKEY_AudioDevice_EnableEndpointByDefault,
+    PKEY_LFX_ProcessingModes_Supported_For_Streaming,
+    PKEY_AudioEngine_PhysicalSpeaker,
+    PKEY_AudioEngine_FullRangeSpeaker,
+    PKEY_EFFECTNODEINFO_RENDER,
+    PKEY_EFFECTNODEINFO_CAPTURE,
+    PKEY_CTGUID,
+    PKEY_CT_LINETOAUX_GUID,
+    PKEY_FX_UiClsid,
+    PKEY_ItemNameDisplay,
+    PKEY_FX_PreMixClsid,
+    PKEY_FX_PostMixClsid,
+    PKEY_AudioDevice_NeverSetAsDefaultEndpoint,
+    PKEY_Composite_SFX,
+    PKEY_Composite_MFX,
+    PKEY_Composite_EFX,
+    PKEY_Composite_Offload_SFX,
+    PKEY_Composite_Offload_MFX,
+    PKEY_AudioEndpoint_ControlPanelProvider,
+    PKEY_AudioEndpoint_Ext_UiClsid,
+    PKEY_BYPASS_TP_EFFECTS
+)
+from .propkey import (
+    PKEY_Audio_ChannelCount,
+    PKEY_Audio_Compression,
+    PKEY_Audio_EncodingBitrate,
+    PKEY_Audio_Format,
+    PKEY_Audio_IsVariableBitRate,
+    PKEY_Audio_PeakValue,
+    PKEY_Audio_SampleRate,
+    PKEY_Audio_SampleSize,
+    PKEY_Audio_StreamName,
+    PKEY_Audio_StreamNumber,
+    PKEY_Devices_AudioDevice_Microphone_IsFarField,
+    PKEY_Devices_AudioDevice_Microphone_SensitivityInDbfs,
+    PKEY_Devices_AudioDevice_Microphone_SensitivityInDbfs2,
+    PKEY_Devices_AudioDevice_Microphone_SignalToNoiseRatioInDb,
+    PKEY_Devices_AudioDevice_RawProcessingSupported,
+    PKEY_Devices_AudioDevice_SpeechProcessingSupported
+)
+
 _device_enumerator = None
+
 
 def devices(message=True):
     if message:

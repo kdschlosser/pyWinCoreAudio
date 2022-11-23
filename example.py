@@ -36,6 +36,7 @@ from pyWinCoreAudio import (
     ON_SESSION_STATE_CHANGED,
     ON_SESSION_CHANNEL_VOLUME_CHANGED,
     ON_PART_CHANGE,
+    PKEY_AudioEndpoint_Disable_SysFx
 )
 
 
@@ -55,18 +56,12 @@ def on_device_removed(signal, name):
 
 _on_device_removed = ON_DEVICE_REMOVED.register(on_device_removed)
 
-from pyWinCoreAudio.functiondiscoverykeys_devpkey import (
-    PKEY_AudioEndpoint_Disable_SysFx
-)
-
 
 def on_device_property_changed(signal, device, key, endpoint=None):
-    global audio_enhancements_endpoint
-
     if endpoint is not None:
         if 'Speakers' in endpoint.name:
             if key == PKEY_AudioEndpoint_Disable_SysFx:
-                value = endpoint.audio_enhancements_enabled
+                value = not endpoint.audio_enhancements_enabled
                 print('Property changed:', device.name + '.' + endpoint.name, key, '=', value)
             else:
                 value = endpoint.get_property(key)

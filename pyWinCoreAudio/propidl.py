@@ -87,6 +87,9 @@ LPSAFEARRAY = POINTER(SAFEARRAY)
 
 PROPID = ULONG
 
+VARIANT_TRUE = 0xFFFF
+VARIANT_FALSE = 0x0000
+
 
 # noinspection PyAttributeOutsideInit
 class tagPROPVARIANT(ctypes.Structure):
@@ -325,12 +328,21 @@ class tagPROPVARIANT(ctypes.Structure):
         VARIANT_BOOL
         VT_BOOL
         """
-        return self._boolVal
+        return self._boolVal.value
 
     @boolVal.setter
     def boolVal(self, value):
         _PropVariantClear(self)
-        self._boolVal = value
+
+        boolVal = VARIANT_BOOL()
+
+        if value:
+            boolVal.value = True
+        else:
+            boolVal.value = False
+
+        self._boolVal = boolVal
+
         self.vt = VT_BOOL
 
     @boolVal.deleter
@@ -2142,9 +2154,46 @@ STATSTG = tagSTATSTG
 
 
 class tagBLOB(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagBLOB, self).__init__()
+            self.value = val
+
+        else:
+            super(tagBLOB, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        for i in range(self.cbSize):
+            res.append(self.pBlobData[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cbSize = len(val)
+
+        pBlobData = (UBYTE * len(val))()
+
+        for i, v in enumerate(val):
+            pBlobData[i] = val
+
+        self.pBlobData = pBlobData
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cbSize', ULONG),
-        ('pBlobData', POINTER(BYTE)),
+        ('pBlobData', POINTER(UBYTE)),
     ]
 
 
@@ -2173,6 +2222,45 @@ CLIPDATA = tagCLIPDATA
 
 
 class tagCAC(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAC, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAC, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(CHAR)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(CHAR)
+
+        pElems = (CHAR * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(CHAR)),
@@ -2183,15 +2271,94 @@ CAC = tagCAC
 
 
 class tagCAUB(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAUB, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAUB, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(UBYTE)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(UBYTE)
+
+        pElems = (UBYTE * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(UBYTE)),
     ]
 
+
 CAUB = tagCAUB
 
 
 class tagCAI(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAI, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAI, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(SHORT)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(SHORT)
+
+        pElems = (SHORT * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(SHORT)),
@@ -2202,6 +2369,45 @@ CAI = tagCAI
 
 
 class tagCAUI(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAUI, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAUI, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(USHORT)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(USHORT)
+
+        pElems = (USHORT * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(USHORT)),
@@ -2212,6 +2418,44 @@ CAUI = tagCAUI
 
 
 class tagCAL(ctypes.Structure):
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAL, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAL, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(LONG)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(LONG)
+
+        pElems = (LONG * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(LONG)),
@@ -2222,6 +2466,45 @@ CAL = tagCAL
 
 
 class tagCAUL(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAUL, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAUL, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(ULONG)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(ULONG)
+
+        pElems = (ULONG * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(ULONG)),
@@ -2232,6 +2515,45 @@ CAUL = tagCAUL
 
 
 class tagCAFLT(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAFLT, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAFLT, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(FLOAT)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(FLOAT)
+
+        pElems = (FLOAT * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(FLOAT)),
@@ -2242,6 +2564,45 @@ CAFLT = tagCAFLT
 
 
 class tagCADBL(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCADBL, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCADBL, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(DOUBLE)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(DOUBLE)
+
+        pElems = (DOUBLE * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(DOUBLE)),
@@ -2252,6 +2613,45 @@ CADBL = tagCADBL
 
 
 class tagCACY(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCACY, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCACY, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(CY)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(CY)
+
+        pElems = (CY * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(CY)),
@@ -2262,6 +2662,45 @@ CACY = tagCACY
 
 
 class tagCADATE(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCADATE, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCADATE, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(DOUBLE)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(DOUBLE)
+
+        pElems = (DOUBLE * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(DOUBLE)),
@@ -2272,6 +2711,45 @@ CADATE = tagCADATE
 
 
 class tagCABSTR(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCABSTR, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCABSTR, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(BSTR)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(BSTR)
+
+        pElems = (BSTR * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(BSTR)),
@@ -2282,6 +2760,45 @@ CABSTR = tagCABSTR
 
 
 class tagCABSTRBLOB(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCABSTRBLOB, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCABSTRBLOB, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(BSTRBLOB)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(BSTRBLOB)
+
+        pElems = (BSTRBLOB * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(BSTRBLOB)),
@@ -2292,6 +2809,45 @@ CABSTRBLOB = tagCABSTRBLOB
 
 
 class tagCABOOL(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCABOOL, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCABOOL, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(VARIANT_BOOL)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(VARIANT_BOOL)
+
+        pElems = (VARIANT_BOOL * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(VARIANT_BOOL)),
@@ -2302,6 +2858,45 @@ CABOOL = tagCABOOL
 
 
 class tagCASCODE(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCASCODE, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCASCODE, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(SCODE)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(SCODE)
+
+        pElems = (SCODE * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(SCODE)),
@@ -2312,6 +2907,45 @@ CASCODE = tagCASCODE
 
 
 class tagCAPROPVARIANT(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAPROPVARIANT, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAPROPVARIANT, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(PROPVARIANT)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(PROPVARIANT)
+
+        pElems = (PROPVARIANT * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(PROPVARIANT)),
@@ -2322,6 +2956,45 @@ CAPROPVARIANT = tagCAPROPVARIANT
 
 
 class tagCAH(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAH, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAH, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(LARGE_INTEGER)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(LARGE_INTEGER)
+
+        pElems = (LARGE_INTEGER * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(LARGE_INTEGER)),
@@ -2332,6 +3005,45 @@ CAH = tagCAH
 
 
 class tagCAUH(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAUH, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAUH, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(ULARGE_INTEGER)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(ULARGE_INTEGER)
+
+        pElems = (ULARGE_INTEGER * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(ULARGE_INTEGER)),
@@ -2342,6 +3054,45 @@ CAUH = tagCAUH
 
 
 class tagCALPSTR(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCALPSTR, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCALPSTR, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(LPSTR)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(LPSTR)
+
+        pElems = (LPSTR * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(LPSTR)),
@@ -2352,6 +3103,45 @@ CALPSTR = tagCALPSTR
 
 
 class tagCALPWSTR(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCALPWSTR, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCALPWSTR, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(LPWSTR)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(LPWSTR)
+
+        pElems = (LPWSTR * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(LPWSTR)),
@@ -2362,6 +3152,45 @@ CALPWSTR = tagCALPWSTR
 
 
 class tagCAFILETIME(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCAFILETIME, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCAFILETIME, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(FILETIME)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(FILETIME)
+
+        pElems = (FILETIME * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(FILETIME)),
@@ -2372,6 +3201,45 @@ CAFILETIME = tagCAFILETIME
 
 
 class tagCACLIPDATA(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCACLIPDATA, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCACLIPDATA, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(CLIPDATA)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(CLIPDATA)
+
+        pElems = (CLIPDATA * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     _fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(CLIPDATA)),
@@ -2382,6 +3250,45 @@ CACLIPDATA = tagCACLIPDATA
 
 
 class tagCACLSID(ctypes.Structure):
+
+    def __init__(self, *args):
+        if len(args) == 1:
+            val = args[1]
+            super(tagCACLSID, self).__init__()
+            self.value = val
+
+        else:
+            super(tagCACLSID, self).__init__(*args)
+
+    @property
+    def value(self):
+        res = []
+
+        cElems = self.cElems // ctypes.sizeof(CLSID)
+
+        for i in range(cElems):
+            res.append(self.pElems[i])
+
+        return res
+
+    @value.setter
+    def value(self, val):
+        self.cElems = len(val) * ctypes.sizeof(CLSID)
+
+        pElems = (CLSID * len(val))()
+
+        for i, v in enumerate(val):
+            pElems[i] = val
+
+        self.pElems = pElems
+
+    def __iter__(self):
+        for item in self.value:
+            yield item
+
+    def __str__(self):
+        return str(self.value)
+
     fields_ = [
         ('cElems', ULONG),
         ('pElems', POINTER(CLSID)),

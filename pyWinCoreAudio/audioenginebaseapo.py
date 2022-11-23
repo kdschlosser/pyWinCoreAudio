@@ -4,11 +4,49 @@ from .propsys import IPropertyStore
 from .AudioAPOTypes import *
 from .audiomediatype import *
 from .data_types import *
+from .guiddef import PROPERTYKEY as _PROPERTYKEY
 import ctypes
 
 
 def _HRESULT_TYPEDEF_(sc):
     return sc
+
+# -*- coding: utf-8 -*-
+#
+# This file is part of EventGhost.
+# Copyright © 2005-2021 EventGhost Project <http://www.eventghost.net/>
+#
+# EventGhost is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 2 of the License, or (at your option)
+# any later version.
+#
+# EventGhost is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with EventGhost. If not, see <http://www.gnu.org/licenses/>.
+
+
+class PK(_PROPERTYKEY):
+    def __str__(self):
+        for name, pkey in globals().items():
+            if not name.startswith('PKEY_'):
+                continue
+
+            if (
+                    str(pkey.fmtid) == str(self.fmtid) and
+                    pkey.pid == self.pid
+            ):
+                return name
+
+        return _PROPERTYKEY.__str__(self)
+
+
+def DEFINE_PROPERTYKEY(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8, key):
+    return PK(GUID(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8), key)
 
 
 # The object has already been initialized.
@@ -468,7 +506,7 @@ class APOInitSystemEffects(ctypes.Structure):
 class APOInitSystemEffects2(ctypes.Structure):
     _fields_ = [
         ('APOInit', APOInitBaseStruct),
-        ('pAPOEndpointProperties', ),
+        ('pAPOEndpointProperties', POINTER(IPropertyStore)),
         ('pAPOSystemEffectsProperties', POINTER(IPropertyStore)),
         ('pReserved', POINTER(VOID)),
         ('pDeviceCollection', POINTER(IMMDeviceCollection)),
@@ -504,6 +542,7 @@ PKEY_FX_Association = DEFINE_PROPERTYKEY(
     0x1D,
     0
 )
+
 PKEY_FX_PreMixEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -518,6 +557,7 @@ PKEY_FX_PreMixEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     1
 )
+
 PKEY_FX_PostMixEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -532,6 +572,7 @@ PKEY_FX_PostMixEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     2
 )
+
 PKEY_FX_UserInterfaceClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -546,6 +587,7 @@ PKEY_FX_UserInterfaceClsid = DEFINE_PROPERTYKEY(
     0x1D,
     3
 )
+
 PKEY_FX_FriendlyName = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -560,6 +602,7 @@ PKEY_FX_FriendlyName = DEFINE_PROPERTYKEY(
     0x1D,
     4
 )
+
 PKEY_FX_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -574,6 +617,7 @@ PKEY_FX_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     5
 )
+
 PKEY_FX_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -588,6 +632,7 @@ PKEY_FX_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     6
 )
+
 PKEY_FX_EndpointEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -602,6 +647,7 @@ PKEY_FX_EndpointEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     7
 )
+
 PKEY_FX_KeywordDetector_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -616,6 +662,7 @@ PKEY_FX_KeywordDetector_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     8
 )
+
 PKEY_FX_KeywordDetector_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -630,6 +677,7 @@ PKEY_FX_KeywordDetector_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     9
 )
+
 PKEY_FX_KeywordDetector_EndpointEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -644,6 +692,7 @@ PKEY_FX_KeywordDetector_EndpointEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     10
 )
+
 PKEY_FX_Offload_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -658,6 +707,7 @@ PKEY_FX_Offload_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     11
 )
+
 PKEY_FX_Offload_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -672,6 +722,7 @@ PKEY_FX_Offload_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     12
 )
+
 PKEY_CompositeFX_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -686,6 +737,7 @@ PKEY_CompositeFX_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     13
 )
+
 PKEY_CompositeFX_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -700,6 +752,7 @@ PKEY_CompositeFX_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     14
 )
+
 PKEY_CompositeFX_EndpointEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -714,6 +767,7 @@ PKEY_CompositeFX_EndpointEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     15
 )
+
 PKEY_CompositeFX_KeywordDetector_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -728,6 +782,7 @@ PKEY_CompositeFX_KeywordDetector_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     16
 )
+
 PKEY_CompositeFX_KeywordDetector_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -742,6 +797,7 @@ PKEY_CompositeFX_KeywordDetector_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     17
 )
+
 PKEY_CompositeFX_KeywordDetector_EndpointEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -756,6 +812,7 @@ PKEY_CompositeFX_KeywordDetector_EndpointEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     18
 )
+
 PKEY_CompositeFX_Offload_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -770,6 +827,7 @@ PKEY_CompositeFX_Offload_StreamEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     19
 )
+
 PKEY_CompositeFX_Offload_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0xD04E05A6,
     0x594B,
@@ -784,6 +842,7 @@ PKEY_CompositeFX_Offload_ModeEffectClsid = DEFINE_PROPERTYKEY(
     0x1D,
     20
 )
+
 PKEY_SFX_ProcessingModes_Supported_For_Streaming = DEFINE_PROPERTYKEY(
     0xd3993a3f,
     0x99c2,
@@ -798,6 +857,7 @@ PKEY_SFX_ProcessingModes_Supported_For_Streaming = DEFINE_PROPERTYKEY(
     0x4b,
     5
 )
+
 PKEY_MFX_ProcessingModes_Supported_For_Streaming = DEFINE_PROPERTYKEY(
     0xd3993a3f,
     0x99c2,
@@ -812,6 +872,7 @@ PKEY_MFX_ProcessingModes_Supported_For_Streaming = DEFINE_PROPERTYKEY(
     0x4b,
     6
 )
+
 PKEY_EFX_ProcessingModes_Supported_For_Streaming = DEFINE_PROPERTYKEY(
     0xd3993a3f,
     0x99c2,
@@ -826,6 +887,7 @@ PKEY_EFX_ProcessingModes_Supported_For_Streaming = DEFINE_PROPERTYKEY(
     0x4b,
     7
 )
+
 PKEY_SFX_KeywordDetector_ProcessingModes_Supported_For_Streaming = (
     DEFINE_PROPERTYKEY(
         0xd3993a3f,

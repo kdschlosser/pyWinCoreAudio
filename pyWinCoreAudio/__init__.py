@@ -22,14 +22,7 @@ __description__ = 'Python bindings to Microsoft Windows® Core Audio'
 __url__ = 'https://github.com/kdschlosser/pyWinCoreAudio'
 
 
-try:
-    import comtypes as _comtypes
-except ImportError:
-    pass
-
-import weakref as _weakref
-
-from .signal import (
+from .signal import (  # NOQA
     ON_DEVICE_ADDED,
     ON_DEVICE_REMOVED,
     ON_DEVICE_PROPERTY_CHANGED,
@@ -47,6 +40,12 @@ from .signal import (
     ON_SESSION_STATE_CHANGED,
     ON_SESSION_CHANNEL_VOLUME_CHANGED,
     ON_PART_CHANGE
+)
+
+from .ksmedia import (
+    PKEY_AudioEndpoint_RealtekChannelsState,
+    PKEY_AudioEndpoint_RealtekChannelLevelOffset,
+    PKEY_AudioEndpoint_RealtekChannelDistance
 )
 
 from .audioenginebaseapo import (
@@ -67,7 +66,8 @@ from .audioenginebaseapo import (
     PKEY_EFX_KeywordDetector_ProcessingModes_Supported_For_Streaming,
     PKEY_SFX_Offload_ProcessingModes_Supported_For_Streaming,
     PKEY_MFX_Offload_ProcessingModes_Supported_For_Streaming,
-    PKEY_APO_SWFallback_ProcessingModes
+    PKEY_APO_SWFallback_ProcessingModes,
+    PKEY_AudioEndpoint_Association
 )
 from .functiondiscoverykeys_devpkey import (
     PKEY_Device_FriendlyName,
@@ -82,7 +82,6 @@ from .mmdeviceapi import (
     PKEY_AudioEndpoint_FullRangeSpeakers,
     PKEY_AudioEndpoint_JackSubType,
     PKEY_AudioEndpoint_ControlPanelPageProvider,
-    PKEY_AudioEndpoint_Association,
     PKEY_AudioEndpoint_Supports_EventDriven_Mode,
     PKEY_AudioEndpoint_Default_VolumeInDb,
     PKEY_AudioEngine_DeviceFormat,
@@ -141,46 +140,76 @@ from .propkey import (
     PKEY_Devices_AudioDevice_SpeechProcessingSupported
 )
 
-_device_enumerator = None
+
+class __Module(object):
+
+    def __init__(self):
+        import sys
+
+        mod = sys.modules[__name__]
+        object.__setattr__(self, '__name__', __name__)
+        object.__setattr__(self, '__doc__', mod.__doc__)
+        object.__setattr__(self, '__file__', mod.__file__)
+        object.__setattr__(self, '__loader__', mod.__loader__)
+        object.__setattr__(self, '__package__', mod.__package__)
+        object.__setattr__(self, '__path__', mod.__path__)
+        object.__setattr__(self, '__spec__', mod.__spec__)
+        object.__setattr__(self, '_device_enumerator', None)
+        object.__setattr__(self, '__original_module__', mod)
+        object.__setattr__(self, '__version__', __version__)
+        object.__setattr__(self, '__author__', __author__)
+        object.__setattr__(self, '__description__', __description__)
+        object.__setattr__(self, '__url__', __url__)
+        self.__dict__.update(mod.__dict__)
+        sys.modules[__name__] = self
+
+    def __getattr__(self, item):
+        if item in self.__dict__:
+            return self.__dict__[item]
+
+        if hasattr(self.__original_module__, item):
+            value = getattr(self.__original_module__, item)
+            object.__setattr__(self, item, value)
+            return value
+
+        raise AttributeError(item)
+
+    def __setattr__(self, key, value):
+        raise AttributeError('access denied')
+
+    def __iter__(self):
+        if self._device_enumerator is None:
+            import comtypes
+
+            comtypes.CoInitialize()
+            from .mmdeviceapi import IMMDeviceEnumerator
+            object.__setattr__(self, '_device_enumerator', IMMDeviceEnumerator())
+
+        for device in self._device_enumerator:
+            yield device
+
+    # def __del__(self):
+    #     import comtypes
+    #
+    #     if self._device_enumerator is not None:
+    #         object.__setattr__(self, '_device_enumerator', None)
+    #         comtypes.CoUninitialize()
+
+    def unload(self):
+        import comtypes
+
+        if self._device_enumerator is not None:
+            object.__setattr__(self, '_device_enumerator', None)
+            comtypes.CoUninitialize()
 
 
-def devices(message=True):
-    if message:
-        print(
-            '****************** IMPORTANT ******************\n'
-            'DO NOT hold a reference to any of the objects\n'
-            'that are produced from this library. If you do\n'
-            'there is a high probability of getting a memory\n'
-            'leak.\n\n'
-            'Make sure you call pyWinCoreAudio.stop() when\n'
-            'this library is no longer going to be used.\n\n'
-            'The object returned from pyWinCoreAudio.devices\n'
-            'is a weak reference and this is the only object\n'
-            'from this library that you are allowed to hold\n'
-            'a reference to. The object returned is a \n'
-            'callable and must be called each and every\n'
-            'time before using it. DO NOT hold a reference\n'
-            'to the object that is returned.\n\n'
-            'The above is really important so that the\n'
-            'library can function properly and no errors\n'
-            'will take place.\n'
-            '***********************************************\n'
-        )
-
-    global _device_enumerator
-
-    if _device_enumerator is None:
-        _comtypes.CoInitialize()
-        from .mmdeviceapi import IMMDeviceEnumerator
-
-        _device_enumerator = IMMDeviceEnumerator()
-
-    return _weakref.ref(_device_enumerator)
+__Module()
 
 
-def stop():
-    global _device_enumerator
+def unload():
+    pass
 
-    if _device_enumerator is not None:
-        _device_enumerator = None
-        _comtypes.CoUninitialize()
+
+def __iter__(self):
+    pass
+

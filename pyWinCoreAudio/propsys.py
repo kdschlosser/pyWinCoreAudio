@@ -129,6 +129,12 @@ class IPropertyStore(IUnknown):
 
         return prop_var.value
 
+    def __iter__(self):
+        count = self.GetCount()
+        for i in range(count):
+            prop_key = self.GetAt(i)
+            yield prop_key
+
 
 PIPropertyStore = POINTER(IPropertyStore)
 

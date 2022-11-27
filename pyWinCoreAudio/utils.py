@@ -22,6 +22,7 @@ import ctypes
 import comtypes
 import os
 from io import BytesIO
+import winreg
 
 
 RT_CURSOR = 1
@@ -254,4 +255,88 @@ def get_process_name(id_):
 
     if value:
         return os.path.split(os.path.splitext(value)[0])[-1]
+
+
+
+import struct
+
+class Registry(object):
+
+    def __init__(self, key):
+        self.key = key
+
+    def __iter__(self):
+        num_keys = winreg.QueryInfoKey(self.key)[0]
+        for i in range(0, num_keys):
+            key_name = winreg.EnumKey(self.key, i)
+            key = winreg.OpenKey(self.key, key_name)
+            yield Registry(key)
+
+    @property
+    def values(self):
+        num_values = winreg.QueryInfoKey(self.key)[1]
+        for i in range(0, num_values):
+            name, data, d_type = winreg.EnumValue(self.key, i)
+            winreg.REG_BINARY
+            winreg.REG_DWORD
+            winreg.REG_DWORD_LITTLE_ENDIAN
+            winreg.REG_DWORD_BIG_ENDIAN
+
+            winreg.REG_MULTI_SZ
+            winreg.REG_NONE
+            winreg.REG_QWORD
+            winreg.REG_QWORD_LITTLE_ENDIAN
+            winreg.REG_SZ
+
+
+class ValueBase(object):
+
+    def __init__(self, key, name, data):
+        self.key = key
+        self.name = name
+        self.data = data
+
+
+class ValueBinary(ValueBase):
+
+    def __iter__(self):
+        unpacked = struct.unpack('<Q', self.data)
+        unpacked.bit_length()
+
+        _winreg.SetValueEx(key, "Attributes", 0, _winreg.REG_BINARY, s)
+
+
+
+
+
+
+
+
+
+import errno, os, winreg
+
+
+def find_reg_key(root_key, key_name):
+    for arch_key in (winreg.KEY_WOW64_32KEY, winreg.KEY_WOW64_64KEY):
+        root_key
+
+
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", 0, winreg.KEY_READ | arch_key)
+
+
+def find_reg_value(root, path, value_name):
+    for arch_key in (winreg.KEY_WOW64_32KEY, winreg.KEY_WOW64_64KEY):
+        key = winreg.OpenKey(root, path, 0, winreg.KEY_READ | arch_key)
+        num_keys, num_values = winreg.QueryInfoKey(key)[:2]
+        for i in range(0, num_values):
+            skey_name = winreg.EnumKey(key, i)
+            skey = winreg.OpenKey(key, skey_name)
+            try:
+                print(winreg.QueryValueEx(skey, 'DisplayName')[0])
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    # DisplayName doesn't exist in this skey
+                    pass
+            finally:
+                skey.Close()
 

@@ -18,6 +18,26 @@
 
 from .data_types import *
 from . import utils
+from .guiddef import PROPERTYKEY as _PROPERTYKEY, GUID
+
+
+class PK(_PROPERTYKEY):
+    def __str__(self):
+        for name, pkey in globals().items():
+            if not name.startswith('PKEY_'):
+                continue
+
+            if (
+                str(pkey.fmtid) == str(self.fmtid) and
+                pkey.pid == self.pid
+            ):
+                return name
+
+        return _PROPERTYKEY.__str__(self)
+
+
+def DEFINE_PROPERTYKEY(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8, key):
+    return PK(GUID(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8), key)
 
 
 class KSPROPERTY_AUDIO(ENUM):
@@ -1274,99 +1294,489 @@ KSAUDIO_SPEAKER_TOP_MIDDLE = SPEAKER_TOP_CENTER
 KSAUDIO_SPEAKER_SUPER_WOOFER = SPEAKER_LOW_FREQUENCY
 
 
+PKEY_AudioEndpoint_RealtekChannelsState = DEFINE_PROPERTYKEY(
+    0x327AD131,
+    0x6BE1,
+    0x4CA0,
+    0xAA,
+    0x28,
+    0x97,
+    0x25,
+    0xA6,
+    0x36,
+    0x7D,
+    0x0C,
+    0
+)
+
+
+class PropertyKeyBase(PK):
+    def __init__(self, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8, key):
+        guid = GUID(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8)
+        super().__init__(guid, key)
+
+    def get(self, endpoint):
+        data = self.decode(endpoint, None)
+        return data
+
+
+class _PKEY_AudioEndpoint_RealtekChannelLevelOffset(PropertyKeyBase):
+
+    def decode(self, endpoint, data):
+        import winreg
+        import struct
+
+        path = (
+            r'SOFTWARE\Microsoft\Windows\CurrentVersion'
+            r'\MMDevices\Audio\{0}\{1}\FxProperties'.format(
+                str(endpoint.data_flow),
+                endpoint.guid.lower()
+            )
+        )
+
+        key = winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            path,
+            0,
+            winreg.KEY_READ
+        )
+
+        try:
+            value, d_type = winreg.QueryValueEx(
+                key,
+                "{fmtid},{pid}".format(
+                    fmtid=str(self.fmtid).lower(),
+                    pid=self.pid)
+            )
+        except:  # NOQA
+            winreg.CloseKey(key)
+            data = {
+                SPEAKER_TOP_FRONT_LEFT: None,
+                SPEAKER_FRONT_LEFT: None,
+                SPEAKER_TOP_FRONT_RIGHT: None,
+                SPEAKER_FRONT_RIGHT: None,
+                SPEAKER_TOP_FRONT_CENTER: None,
+                SPEAKER_FRONT_CENTER: None,
+                SPEAKER_LOW_FREQUENCY: None,
+                SPEAKER_TOP_BACK_LEFT: None,
+                SPEAKER_BACK_LEFT: None,
+                SPEAKER_BACK_CENTER: None,
+                SPEAKER_BACK_RIGHT: None,
+                SPEAKER_TOP_BACK_RIGHT: None,
+                SPEAKER_SIDE_LEFT: None,
+                SPEAKER_TOP_CENTER: None,
+                SPEAKER_SIDE_RIGHT: None,
+                SPEAKER_TOP_BACK_CENTER: None,
+                SPEAKER_FRONT_LEFT_OF_CENTER: None,
+                SPEAKER_FRONT_RIGHT_OF_CENTER: None
+            }
+        else:
+            winreg.CloseKey(key)
+            unpacked = list(item[0] for item in struct.iter_unpack('<h', value))
+            data = {
+                SPEAKER_TOP_FRONT_LEFT: None,
+                SPEAKER_FRONT_LEFT: unpacked[4],
+                SPEAKER_TOP_FRONT_RIGHT: None,
+                SPEAKER_FRONT_RIGHT: unpacked[6],
+                SPEAKER_TOP_FRONT_CENTER: None,
+                SPEAKER_FRONT_CENTER: unpacked[8],
+                SPEAKER_LOW_FREQUENCY: unpacked[10],
+                SPEAKER_TOP_BACK_LEFT: None,
+                SPEAKER_BACK_LEFT: unpacked[12],
+                SPEAKER_BACK_CENTER: None,
+                SPEAKER_BACK_RIGHT: unpacked[14],
+                SPEAKER_TOP_BACK_RIGHT: None,
+                SPEAKER_SIDE_LEFT: unpacked[16],
+                SPEAKER_TOP_CENTER: None,
+                SPEAKER_SIDE_RIGHT: unpacked[18],
+                SPEAKER_TOP_BACK_CENTER: None,
+                SPEAKER_FRONT_LEFT_OF_CENTER: None,
+                SPEAKER_FRONT_RIGHT_OF_CENTER: None
+            }
+
+        return data
+
+
+PKEY_AudioEndpoint_RealtekChannelLevelOffset = (
+    _PKEY_AudioEndpoint_RealtekChannelLevelOffset(
+        0x4B361010,
+        0xDEF7,
+        0x43A1,
+        0xA5,
+        0xDC,
+        0x07,
+        0x1D,
+        0x95,
+        0x5B,
+        0x62,
+        0xF7,
+        15
+    )
+)
+
+
+class _PKEY_AudioEndpoint_RealtekChannelDistance(PropertyKeyBase):
+
+    def decode(self, endpoint, data):
+        import winreg
+        import struct
+
+        path = (
+            r'SOFTWARE\Microsoft\Windows\CurrentVersion'
+            r'\MMDevices\Audio\{0}\{1}\FxProperties'.format(
+                str(endpoint.data_flow),
+                endpoint.guid.lower()
+            )
+        )
+
+        key = winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            path,
+            0,
+            winreg.KEY_READ
+        )
+
+        try:
+            value, d_type = winreg.QueryValueEx(
+                key,
+                "{fmtid},{pid}".format(
+                    fmtid=str(self.fmtid).lower(),
+                    pid=self.pid)
+            )
+        except:  # NOQA
+            winreg.CloseKey(key)
+            data = {
+                SPEAKER_TOP_FRONT_LEFT: None,
+                SPEAKER_FRONT_LEFT: None,
+                SPEAKER_TOP_FRONT_RIGHT: None,
+                SPEAKER_FRONT_RIGHT: None,
+                SPEAKER_TOP_FRONT_CENTER: None,
+                SPEAKER_FRONT_CENTER: None,
+                SPEAKER_LOW_FREQUENCY: None,
+                SPEAKER_TOP_BACK_LEFT: None,
+                SPEAKER_BACK_LEFT: None,
+                SPEAKER_BACK_CENTER: None,
+                SPEAKER_BACK_RIGHT: None,
+                SPEAKER_TOP_BACK_RIGHT: None,
+                SPEAKER_SIDE_LEFT: None,
+                SPEAKER_TOP_CENTER: None,
+                SPEAKER_SIDE_RIGHT: None,
+                SPEAKER_TOP_BACK_CENTER: None,
+                SPEAKER_FRONT_LEFT_OF_CENTER: None,
+                SPEAKER_FRONT_RIGHT_OF_CENTER: None
+            }
+        else:
+            winreg.CloseKey(key)
+            unpacked = list(item[0] for item in struct.iter_unpack('<h', value))
+            data = {
+                SPEAKER_TOP_FRONT_LEFT: None,
+                SPEAKER_FRONT_LEFT: unpacked[6] / 100.0,
+                SPEAKER_TOP_FRONT_RIGHT: None,
+                SPEAKER_FRONT_RIGHT: unpacked[8] / 100.0,
+                SPEAKER_TOP_FRONT_CENTER: None,
+                SPEAKER_FRONT_CENTER: unpacked[10] / 100.0,
+                SPEAKER_LOW_FREQUENCY: None,
+                SPEAKER_TOP_BACK_LEFT: None,
+                SPEAKER_BACK_LEFT: unpacked[14] / 100.0,
+                SPEAKER_BACK_CENTER: None,
+                SPEAKER_BACK_RIGHT: unpacked[16] / 100.0,
+                SPEAKER_TOP_BACK_RIGHT: None,
+                SPEAKER_SIDE_LEFT: unpacked[18] / 100.0,
+                SPEAKER_TOP_CENTER: None,
+                SPEAKER_SIDE_RIGHT: unpacked[20] / 100.0,
+                SPEAKER_TOP_BACK_CENTER: None,
+                SPEAKER_FRONT_LEFT_OF_CENTER: None,
+                SPEAKER_FRONT_RIGHT_OF_CENTER: None
+            }
+
+        return data
+
+
+PKEY_AudioEndpoint_RealtekChannelDistance = (
+    _PKEY_AudioEndpoint_RealtekChannelDistance(
+        0x4B361010,
+        0xDEF7,
+        0x43A1,
+        0xA5,
+        0xDC,
+        0x07,
+        0x1D,
+        0x95,
+        0x5B,
+        0x62,
+        0xF7,
+        16
+    )
+)
+
+
+class BoolPropertyKey(PropertyKeyBase):
+    def decode(self, endpoint, data):
+        import winreg
+
+        path = (
+            r'SOFTWARE\Microsoft\Windows\CurrentVersion'
+            r'\MMDevices\Audio\{0}\{1}\FxProperties'.format(
+                str(endpoint.data_flow),
+                endpoint.guid.lower()
+            )
+        )
+
+        key = winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            path,
+            0,
+            winreg.KEY_READ
+        )
+
+        try:
+            value, d_type = winreg.QueryValueEx(
+                key,
+                "{fmtid},{pid}".format(
+                    fmtid=str(self.fmtid).lower(),
+                    pid=self.pid)
+            )
+        except:  # NOQA
+            winreg.CloseKey(key)
+        else:
+            winreg.CloseKey(key)
+            data = bool(value)
+
+        return data
+
+
+PKEY_AudioEndpoint_RealtekSwapCenterAndSub = BoolPropertyKey(
+    0x4B361010,
+    0xDEF7,
+    0x43A1,
+    0xA5,
+    0xDC,
+    0x07,
+    0x1D,
+    0x95,
+    0x5B,
+    0x62,
+    0xF7,
+    12
+)
+
+
+PKEY_AudioEndpoint_RealtekBassManagement = BoolPropertyKey(
+    0x4B361010,
+    0xDEF7,
+    0x43A1,
+    0xA5,
+    0xDC,
+    0x07,
+    0x1D,
+    0x95,
+    0x5B,
+    0x62,
+    0xF7,
+    9
+)
+
+
+# PROPERTYKEY({E0A941A0-88A2-4DF5-8D6B-DD20BB06E8FB}, 1)
+PKEY_AudioEndpoint_RealtekStereoUpmix = BoolPropertyKey(
+    0xE0A941A0,
+    0x88A2,
+    0x4DF5,
+    0x8D,
+    0x6B,
+    0xDD,
+    0x20,
+    0xBB,
+    0x06,
+    0xE8,
+    0xFB,
+    1
+)
+
+PKEY_AudioEndpoint_RealtekTimeAlignment = BoolPropertyKey(
+    0x4B361010,
+    0xDEF7,
+    0x43A1,
+    0xA5,
+    0xDC,
+    0x07,
+    0x1D,
+    0x95,
+    0x5B,
+    0x62,
+    0xF7,
+    14
+)
+
+
+PKEY_BYPASS_TP_EFFECTS = "{0F8412D3-DC5C-4DB3-B174-DC47A859435C},0"
+
+
+PKEY_FX_UiClsid            = "{D04E05A6-594B-4fb6-A80D-01AF5EED7D1D},3"
+PKEY_ItemNameDisplay       = "{B725F130-47EF-101A-A5F1-02608C9EEBAC},10"
+
+
+# PROPERTYKEY({B3F8FA53-0004-438E-9003-51A46E139BFC}, 24) = True
+# PROPERTYKEY({B3F8FA53-0004-438E-9003-51A46E139BFC}, 27) = False
+# PROPERTYKEY({540B947E-8B40-45BC-A8A2-6A0B894CBDA2}, 9) = [129, 0, 0, 0, 0, 0, 0, 0, 41, 1, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255]
+
+
+class Speaker(object):
+
+    def __init__(self, name, id_, endpoint):
+        self.id = id_
+        self.endpoint = endpoint
+        self.name = name
+
+    @property
+    def active(self):
+        from .mmdeviceapi import PKEY_AudioEndpoint_PhysicalSpeakers
+
+        mask = PKEY_AudioEndpoint_PhysicalSpeakers.get(self.endpoint)
+
+        return mask[self.id]
+
+    @active.setter
+    def active(self, value):
+        from .mmdeviceapi import PKEY_AudioEndpoint_PhysicalSpeakers
+
+        mask = PKEY_AudioEndpoint_PhysicalSpeakers.get(self.endpoint)
+
+        if value:
+            mask[self.id] = True
+        else:
+            mask[self.id] = False
+
+        PKEY_AudioEndpoint_PhysicalSpeakers.set(self.endpoint, mask)
+
+    @property
+    def full_range(self):
+        from .mmdeviceapi import PKEY_AudioEndpoint_FullRangeSpeakers
+
+        mask = PKEY_AudioEndpoint_FullRangeSpeakers.get(self.endpoint)
+
+        return mask[self.id]
+
+    @full_range.setter
+    def full_range(self, value):
+        from .mmdeviceapi import PKEY_AudioEndpoint_FullRangeSpeakers
+
+        mask = PKEY_AudioEndpoint_FullRangeSpeakers.get(self.endpoint)
+
+        if value:
+            mask[self.id] = True
+        else:
+            mask[self.id] = False
+
+        PKEY_AudioEndpoint_FullRangeSpeakers.set(self.endpoint, mask)
+
+    @property
+    def level_offset(self):
+        speakers = PKEY_AudioEndpoint_RealtekChannelLevelOffset.get(self.endpoint)
+        return speakers[self.id]
+
+    @level_offset.setter
+    def level_offset(self, value):
+        value *= 100
+        value -= value % 5
+        speakers = PKEY_AudioEndpoint_RealtekChannelLevelOffset.get(self.endpoint)
+        speakers[self.id] = value
+        PKEY_AudioEndpoint_RealtekChannelLevelOffset.set(self.endpoint, speakers)
+
+    @property
+    def distance(self):
+        speakers = PKEY_AudioEndpoint_RealtekChannelDistance.get(self.endpoint)
+        return speakers[self.id]
+
+    @distance.setter
+    def distance(self, value):
+        value *= 100
+        value -= value % 5
+
+        speakers = PKEY_AudioEndpoint_RealtekChannelDistance.get(self.endpoint)
+        speakers[self.id] = value
+        PKEY_AudioEndpoint_RealtekChannelDistance.set(self.endpoint, speakers)
+
+
+def convert_to_binary(value):
+    bits = []
+    for bit in range(0, 32):
+        bits.append(value >> bit & 0x1)
+
+    return bits
+
+
 class AudioSpeakers(object):
     _methods_ = ()
 
-    def __init__(self, value):
-        if value is None:
-            value = 0
+    def __init__(self, endpoint):
+        self.front_left = Speaker('Front Left', SPEAKER_FRONT_LEFT, endpoint)
+        self.front_left_of_center = Speaker('Front Left of Center', SPEAKER_FRONT_LEFT_OF_CENTER, endpoint)
+        self.front_center = Speaker('Front Center', SPEAKER_FRONT_CENTER, endpoint)
+        self.front_right_of_center = Speaker('Front Right of Center', SPEAKER_FRONT_RIGHT_OF_CENTER, endpoint)
+        self.front_right = Speaker('Front Right', SPEAKER_FRONT_RIGHT, endpoint)
+        self.surround_left = Speaker('Surround Left', SPEAKER_SIDE_LEFT, endpoint)
+        self.surround_right = Speaker('Surround Right', SPEAKER_SIDE_RIGHT, endpoint)
+        self.back_left = Speaker('Back Left', SPEAKER_BACK_LEFT, endpoint)
+        self.back_center = Speaker('Back Center', SPEAKER_BACK_CENTER, endpoint)
+        self.back_right = Speaker('Back Right', SPEAKER_BACK_RIGHT, endpoint)
+        self.surround_center = Speaker('Surround Center', SPEAKER_TOP_CENTER, endpoint)
+        self.top_front_left = Speaker('Top Front Left', SPEAKER_TOP_FRONT_LEFT, endpoint)
+        self.top_front_center = Speaker('Top Front Center', SPEAKER_TOP_FRONT_CENTER, endpoint)
+        self.top_front_right = Speaker('Top Front Right', SPEAKER_TOP_FRONT_RIGHT, endpoint)
+        self.top_back_left = Speaker('Top Back Left', SPEAKER_TOP_BACK_LEFT, endpoint)
+        self.top_back_center = Speaker('Top Back Center', SPEAKER_TOP_BACK_CENTER, endpoint)
+        self.top_back_right = Speaker('Top Back Right', SPEAKER_TOP_BACK_RIGHT, endpoint)
+        self.subwoofer = Speaker('LFE', SPEAKER_LOW_FREQUENCY, endpoint)
 
-        self.front_left = value | SPEAKER_FRONT_LEFT == value
-        self.front_left_of_center = value | SPEAKER_FRONT_LEFT_OF_CENTER == value
-        self.front_center = value | SPEAKER_FRONT_CENTER == value
-        self.front_right_of_center = value | SPEAKER_FRONT_RIGHT_OF_CENTER == value
-        self.front_right = value | SPEAKER_FRONT_RIGHT == value
-        self.side_left = value | SPEAKER_SIDE_LEFT == value
-        self.side_right = value | SPEAKER_SIDE_RIGHT == value
-        self.back_left = value | SPEAKER_BACK_LEFT == value
-        self.back_center = value | SPEAKER_BACK_CENTER == value
-        self.back_right = value | SPEAKER_BACK_RIGHT == value
-        self.high_center = value | SPEAKER_TOP_CENTER == value
-        self.high_front_left = value | SPEAKER_TOP_FRONT_LEFT == value
-        self.high_front_center = value | SPEAKER_TOP_FRONT_CENTER == value
-        self.high_front_right = value | SPEAKER_TOP_FRONT_RIGHT == value
-        self.high_back_left = value | SPEAKER_TOP_BACK_LEFT == value
-        self.high_back_center = value | SPEAKER_TOP_BACK_CENTER == value
-        self.high_back_right = value | SPEAKER_TOP_BACK_RIGHT == value
-        self.subwoofer = value | SPEAKER_LOW_FREQUENCY == value
-        
-    def __int__(self):
-        value = 0
-        
-        if self.front_left:
-            value |= SPEAKER_FRONT_LEFT
-        if self.front_left_of_center:
-            value |= SPEAKER_FRONT_LEFT_OF_CENTER
-        if self.front_center:
-            value |= SPEAKER_FRONT_CENTER
-        if self.front_right_of_center:
-            value |= SPEAKER_FRONT_RIGHT_OF_CENTER
-        if self.front_right:
-            value |= SPEAKER_FRONT_RIGHT
-        if self.side_left:
-            value |= SPEAKER_SIDE_LEFT
-        if self.side_right:
-            value |= SPEAKER_SIDE_RIGHT
-        if self.back_left:
-            value |= SPEAKER_BACK_LEFT
-        if self.back_center:
-            value |= SPEAKER_BACK_CENTER
-        if self.back_right:
-            value |= SPEAKER_BACK_RIGHT
-        if self.high_center:
-            value |= SPEAKER_TOP_CENTER
-        if self.high_front_left:
-            value |= SPEAKER_TOP_FRONT_LEFT
-        if self.high_front_center:
-            value |= SPEAKER_TOP_FRONT_CENTER
-        if self.high_front_right:
-            value |= SPEAKER_TOP_FRONT_RIGHT
-        if self.high_back_left:
-            value |= SPEAKER_TOP_BACK_LEFT
-        if self.high_back_center:
-            value |= SPEAKER_TOP_BACK_CENTER
-        if self.high_back_right:
-            value |= SPEAKER_TOP_BACK_RIGHT
-        if self.subwoofer:
-            value |= SPEAKER_LOW_FREQUENCY
-
-        return value
-
-    def __str__(self):
-        eye_level = sum([
+    def __iter__(self):
+        for speaker in (
             self.front_left,
             self.front_left_of_center,
             self.front_center,
             self.front_right_of_center,
             self.front_right,
-            self.side_left,
-            self.side_right,
+            self.surround_left,
+            self.surround_right,
             self.back_left,
             self.back_center,
-            self.back_right
+            self.back_right,
+            self.surround_center,
+            self.top_front_left,
+            self.top_front_center,
+            self.top_front_right,
+            self.top_back_left,
+            self.top_back_center,
+            self.top_back_right,
+            self.subwoofer
+        ):
+            yield speaker
+
+    def __str__(self):
+        eye_level = sum([
+            self.front_left.active,
+            self.front_left_of_center.active,
+            self.front_center.active,
+            self.front_right_of_center.active,
+            self.front_right.active,
+            self.surround_left.active,
+            self.surround_right.active,
+            self.back_left.active,
+            self.back_center.active,
+            self.back_right.active
         ])
 
         three_d = sum([
-            self.high_center,
-            self.high_front_left,
-            self.high_front_center,
-            self.high_front_right,
-            self.high_back_left,
-            self.high_back_center,
-            self.high_back_right
+            self.surround_center.active,
+            self.top_front_left.active,
+            self.top_front_center.active,
+            self.top_front_right.active,
+            self.top_back_left.active,
+            self.top_back_center.active,
+            self.top_back_right.active
         ])
 
-        sw = int(self.subwoofer)
+        sw = int(self.subwoofer.active)
         if three_d:
             return '{0}.{1}.{2}'.format(eye_level, sw, three_d)
         if eye_level:

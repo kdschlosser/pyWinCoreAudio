@@ -16,8 +16,14 @@
 # You should have received a copy of the GNU General Public License along
 # with EventGhost. If not, see <http://www.gnu.org/licenses/>.
 
+
+import sys
+import os
+
+
+sys.path.insert(0, os.path.dirname(__file__))
+
 import pyWinCoreAudio
-import threading
 from pyWinCoreAudio import (
     ON_DEVICE_ADDED,
     ON_DEVICE_REMOVED,
@@ -40,121 +46,266 @@ from pyWinCoreAudio import (
 )
 
 
-# spdif_endpoint = None
-
-
-def on_device_added(signal, device):
-    print('Device added:', device.name)
+def on_device_added(signal, device_):
+    print(signal, ':', device_.name)
 
 
 _on_device_added = ON_DEVICE_ADDED.register(on_device_added)
 
 
 def on_device_removed(signal, name):
-    print('Device removed:', name)
+    print(signal, ':', name)
 
 
 _on_device_removed = ON_DEVICE_REMOVED.register(on_device_removed)
 
 
-def on_device_property_changed(signal, device, key, endpoint=None):
-    if endpoint is not None:
-        if 'Speakers' in endpoint.name:
-            if key == PKEY_AudioEndpoint_Disable_SysFx:
-                value = not endpoint.audio_enhancements_enabled
-                print('Property changed:', device.name + '.' + endpoint.name, key, '=', value)
+def on_device_property_changed(signal, device_, key, endpoint_=None):
+    if endpoint_ is not None:
+        # if key in (
+        #     pyWinCoreAudio.PKEY_AudioEndpoint_FullRangeSpeakers,
+        #     pyWinCoreAudio.PKEY_AudioEndpoint_RealtekChannelsState,
+        #     pyWinCoreAudio.PKEY_AudioEndpoint_RealtekChannelLevelOffset,
+        #     pyWinCoreAudio.PKEY_AudioEndpoint_RealtekChannelDistance,
+        # ):
+        #     for speaker in endpoint.speakers:
+        #         try:
+        #             print('speaker id:', speaker.id)
+        #             print('speaker active:', speaker.active)
+        #             print('speaker full_range:', speaker.full_range)
+        #             print('speaker level_offset:', speaker.level_offset)
+        #             print('speaker distance:', speaker.distance)
+        #         except:
+        #             pass
+
+        if key == PKEY_AudioEndpoint_Disable_SysFx:
+            value = not endpoint_.audio_enhancements_enabled
+            print(
+                signal, ':',
+                device_.name + '.' + endpoint_.name,
+                key, '=', value
+            )
+
+        elif key in (pyWinCoreAudio.PKEY_AudioEndpoint_RealtekChannelDistance, pyWinCoreAudio.PKEY_AudioEndpoint_RealtekChannelLevelOffset):
+            import winreg
+            import struct
+
+            path = r'SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\{0}\{1}\FxProperties'.format(str(endpoint_.data_flow), endpoint_.guid.lower())
+
+            ky = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path, 0, winreg.KEY_READ)
+            fmtid = key.fmtid
+            pid = key.pid
+            try:
+                value, d_type = winreg.QueryValueEx(ky, "{fmtid},{pid}".format(fmtid=str(fmtid).lower(), pid=pid))
+            except:
+                winreg.CloseKey(ky)
             else:
-                value = endpoint.get_property(key)
-                print('Property changed:', device.name + '.' + endpoint.name, key, '=', value)
+                winreg.CloseKey(ky)
+                unpacked = list(item[0] for item in struct.iter_unpack('<h', value))
+                print(key, "{fmtid},{pid}".format(fmtid=str(fmtid).lower(), pid=pid), unpacked)
+                unpacked = list(item[0] for item in struct.iter_unpack('<H', value))
+                print(unpacked)
+                unpacked = list(item[0] for item in struct.iter_unpack('<Q', value))
+                print(unpacked[0] & 0xFFFFFF, unpacked[0] >> 48)
+
+        else:
+            value = endpoint_.get_property(key, propvar=True)
+            print(key.fmtid, ':', key.pid)
+            print(
+                signal, ':',
+                device_.name + '.' + endpoint_.name,
+                key, '=', value.vt, ':', value.value
+            )
 
     else:
-        print('Property changed:', device.name, key)
+        print(signal, ':', device_.name, key)
 
 
-_on_device_property_changed = ON_DEVICE_PROPERTY_CHANGED.register(on_device_property_changed)
+    #                        FL    FR    FC          BL    BR    SL    SR
+    # [65, 62143, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    #                  FL    FR    FC    LFE   BL    BR    SL    SR
+    # [65, 102  , 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 0010 1011 1111
+# FF FF FF FF FF FF F2 BF
+_on_device_property_changed = (
+    ON_DEVICE_PROPERTY_CHANGED.register(on_device_property_changed)
+)
 
 
-def on_device_state_changed(signal, device, new_state, endpoint=None):
-    if endpoint is not None:
-        print('State changed:', device.name + '.' + endpoint.name, new_state)
-
+def on_device_state_changed(signal, device_, new_state, endpoint_=None):
+    if endpoint_ is not None:
+        print(signal, ':', device_.name + '.' + endpoint_.name, new_state)
     else:
-        print('State changed:', device.name, new_state)
+        print(signal, ':', device_.name, new_state)
 
 
-_on_device_state_changed = ON_DEVICE_STATE_CHANGED.register(on_device_state_changed)
+_on_device_state_changed = (
+    ON_DEVICE_STATE_CHANGED.register(on_device_state_changed)
+)
 
 
-def on_endpoint_volume_changed(signal, device, endpoint, is_muted, master_volume,  channel_volumes):
-    print('Endpoint volume changed:', device.name + '.' + endpoint.name)
+def on_endpoint_volume_changed(
+        signal,
+        device_,
+        endpoint_,
+        is_muted,
+        master_volume,
+        channel_volumes
+):
+    print(signal, ':', device_.name + '.' + endpoint_.name)
     print('mute:', is_muted)
     print('volume:', master_volume)
-    for i, channel in enumerate(channel_volumes):
+    for i, channel_ in enumerate(channel_volumes):
         print('channel:', i)
-        print('volume:', channel)
+        print('volume:', channel_)
 
 
-_on_endpoint_volume_changed = ON_ENDPOINT_VOLUME_CHANGED.register(on_endpoint_volume_changed)
+_on_endpoint_volume_changed = (
+    ON_ENDPOINT_VOLUME_CHANGED.register(on_endpoint_volume_changed)
+)
 
 
-def on_endpoint_default_changed(signal, device, endpoint, role, flow):
-    print('Default changed:', device.name + '.' + endpoint.name, 'role:', role, 'flow:', flow)
+def on_endpoint_default_changed(signal, device_, endpoint_, role, flow):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name,
+        'role:', role,
+        'flow:', flow
+    )
 
 
-_on_endpoint_default_changed = ON_ENDPOINT_DEFAULT_CHANGED.register(on_endpoint_default_changed)
+_on_endpoint_default_changed = (
+    ON_ENDPOINT_DEFAULT_CHANGED.register(on_endpoint_default_changed)
+)
 
 
-def on_session_volume_duck(signal, device, endpoint, session, count_communication_sessions):
-    print('Session volume duck:', device.name + '.' + endpoint.name + '.' + session.name, count_communication_sessions)
+def on_session_volume_duck(
+        signal,
+        device_,
+        endpoint_,
+        session_,
+        count_communication_sessions
+):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + session_.name,
+        count_communication_sessions
+    )
 
 
-_on_session_volume_duck = ON_SESSION_VOLUME_DUCK.register(on_session_volume_duck)
+_on_session_volume_duck = (
+    ON_SESSION_VOLUME_DUCK.register(on_session_volume_duck)
+)
 
 
-def on_session_volume_unduck(signal, device, endpoint, session):
-    print('Session volume unduck:', device.name + '.' + endpoint.name + '.' + session.name)
+def on_session_volume_unduck(signal, device_, endpoint_, session_):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + session_.name
+    )
 
 
-_on_session_volume_unduck = ON_SESSION_VOLUME_UNDUCK.register(on_session_volume_unduck)
+_on_session_volume_unduck = (
+    ON_SESSION_VOLUME_UNDUCK.register(on_session_volume_unduck)
+)
 
 
-def on_session_created(signal, device, endpoint, session):
-    print('Session created:', device.name + '.' + endpoint.name + '.' + session.name)
+def on_session_created(signal, device_, endpoint_, session_):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + session_.name
+    )
 
 
 _on_session_created = ON_SESSION_CREATED.register(on_session_created)
 
 
-def on_session_name_changed(signal, device, endpoint, session, old_name, new_name):
-    print('Session name changed:', device.name + '.' + endpoint.name + '.' + old_name, new_name)
+def on_session_name_changed(
+        signal,
+        device_,
+        endpoint_,
+        __,  # session_,
+        old_name,
+        new_name
+):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + old_name,
+        device_.name + '.' + endpoint_.name + '.' + new_name
+    )
 
 
-_on_session_name_changed = ON_SESSION_NAME_CHANGED.register(on_session_name_changed)
+_on_session_name_changed = (
+    ON_SESSION_NAME_CHANGED.register(on_session_name_changed)
+)
 
 
-def on_session_grouping_changed(signal, device, endpoint, session, new_grouping_param):
-    print('Session grouping changed:', device.name + '.' + endpoint.name + '.' + session.name, new_grouping_param)
+def on_session_grouping_changed(
+        signal,
+        device_,
+        endpoint_,
+        session_,
+        new_grouping_param
+):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + session_.name,
+        new_grouping_param
+    )
 
 
-_on_session_grouping_changed = ON_SESSION_GROUPING_CHANGED.register(on_session_grouping_changed)
+_on_session_grouping_changed = (
+    ON_SESSION_GROUPING_CHANGED.register(on_session_grouping_changed)
+)
 
 
-def on_session_icon_changed(signal, device, endpoint, session, old_icon, new_icon):
-    print('Session icon changed:', device.name + '.' + endpoint.name + '.' + session.name, 'old:', old_icon, 'new:', new_icon)
+def on_session_icon_changed(
+        signal,
+        device_,
+        endpoint_,
+        session_,
+        old_icon,
+        new_icon
+):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + session_.name,
+        'old:', old_icon,
+        'new:', new_icon
+    )
 
 
-_on_session_icon_changed = ON_SESSION_ICON_CHANGED.register(on_session_icon_changed)
+_on_session_icon_changed = (
+    ON_SESSION_ICON_CHANGED.register(on_session_icon_changed)
+)
 
 
-def on_session_disconnect(signal, device, endpoint, name, reason):
-    print('Session disconnected:', device.name + '.' + endpoint.name + '.' + name, reason)
+def on_session_disconnect(signal, device_, endpoint_, name, reason):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + name,
+        reason
+    )
 
 
 _on_session_disconnect = ON_SESSION_DISCONNECT.register(on_session_disconnect)
 
 
-def on_session_volume_changed(signal, device, endpoint, session, new_volume, new_mute):
-    print('Session volume changed:', device.name + '.' + endpoint.name + '.' + session.name, 'volume:', new_volume, 'mute:', new_mute)
+def on_session_volume_changed(
+        signal,
+        device_,
+        endpoint_,
+        session_,
+        new_volume,
+        new_mute
+):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + session_.name,
+        'volume:', new_volume,
+        'mute:', new_mute
+    )
 
     #
     # if new_volume <= 15.0:
@@ -163,33 +314,66 @@ def on_session_volume_changed(signal, device, endpoint, session, new_volume, new
     #     print('new session volume =', session.volume.level)
 
 
-_on_session_volume_changed = ON_SESSION_VOLUME_CHANGED.register(on_session_volume_changed)
+_on_session_volume_changed = (
+    ON_SESSION_VOLUME_CHANGED.register(on_session_volume_changed)
+)
 
 
-def on_session_state_changed(signal, device, endpoint, session, new_state):
-    print('Session volume changed:', device.name + '.' + endpoint.name + '.' + session.name, 'state:', new_state)
+def on_session_state_changed(
+        signal,
+        device_,
+        endpoint_,
+        session_,
+        new_state
+):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + session_.name,
+        'state:', new_state
+    )
 
 
-_on_session_state_changed = ON_SESSION_STATE_CHANGED.register(on_session_state_changed)
+_on_session_state_changed = (
+    ON_SESSION_STATE_CHANGED.register(on_session_state_changed)
+)
 
 
-def on_session_channel_volume_changed(signal, device, endpoint, session, channel, new_volume):
-    print('Session channel volume changed:', device.name + '.' + endpoint.name + '.' + session.name, 'volume:', new_volume, 'channel:', channel)
+def on_session_channel_volume_changed(
+        signal,
+        device_,
+        endpoint_,
+        session_,
+        channel_,
+        new_volume
+):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name + '.' + session_.name,
+        'volume:', new_volume,
+        'channel:', channel_
+    )
 
 
-_on_session_channel_volume_changed = ON_SESSION_CHANNEL_VOLUME_CHANGED.register(on_session_channel_volume_changed)
+_on_session_channel_volume_changed = (
+    ON_SESSION_CHANNEL_VOLUME_CHANGED.register(
+        on_session_channel_volume_changed
+    )
+)
 
 
-def on_part_changed(signal, device, endpoint, interface, process_id):
-    print('Part changed:', device.name + '.' + endpoint.name, 'interface:', interface.__class__.__name__, 'process_id:', process_id)
+def on_part_changed(signal, device_, endpoint_, interface_, process_id):
+    print(
+        signal, ':',
+        device_.name + '.' + endpoint_.name,
+        'interface:', interface_.__class__.__name__,
+        'process_id:', process_id
+    )
 
 
 _on_part_changed = ON_PART_CHANGE.register(on_part_changed)
 
 
-devices = pyWinCoreAudio.devices()
-
-for device in devices():
+for device in pyWinCoreAudio:
     print(device.name)
     print('    endpoints:')
     for endpoint in device:
@@ -201,9 +385,7 @@ for device in devices():
         print('        type:', endpoint.type)
         print('        data flow:', endpoint.data_flow)
         print('        form_factor:', endpoint.form_factor)
-        print('        full_range_speakers:', endpoint.full_range_speakers)
         print('        guid:', endpoint.guid)
-        print('        physical_speakers:', endpoint.physical_speakers)
         print('        audio_enhancements_enabled:', endpoint.audio_enhancements_enabled)
         print('        hdcp_capable:', endpoint.hdcp_capable)
         print('        ai_capable:', endpoint.ai_capable)
@@ -218,7 +400,41 @@ for device in devices():
         print('        channel_config:', endpoint.channel_config)
         print('        input:', endpoint.input)
         print('        output:', endpoint.output)
-        print('        audio_channels:', endpoint.audio_channels)
+        print('        audio_channels:')
+
+        # Chorus
+        # modulation_rate
+        # modulation_depth
+        #
+        # Reverb
+        # reverb_time
+        # delay_feedback
+
+        for channel in endpoint.audio_channels:
+            print('            channel num:', channel.channel_num)
+            print('            bass bost:', channel.bass_boost)
+            print('            loudness:', channel.loudness)
+            print('            automatic gain control:', channel.automatic_gain_control)
+            print('            bass:', channel.bass)
+            print('            mid:', channel.mid)
+            print('            treble:', channel.treble)
+            print('            channel eq:')
+            for band in channel.eq.bands:
+                print('                frequency:', band.frequency)
+                print('                level: ', band.level)
+                print()
+            print()
+        print()
+
+        print('        speakers:', endpoint.speakers)
+
+        for speaker in endpoint.speakers:
+            print('           ', speaker.name)
+            print('                active:', speaker.active)
+            print('                distance:', speaker.distance)
+            print('                fullrange:', speaker.full_range)
+            print('                level offset:', speaker.level_offset)
+            print()
 
         volume = endpoint.volume
         if volume is not None:
@@ -241,7 +457,6 @@ for device in devices():
                 print('        volume db increment:', channel.db_increment)
                 print('        volume peak:', channel.peak)
                 print()
-        del volume
 
         print()
         print()
@@ -267,9 +482,16 @@ for device in devices():
                     print('            channel:', channel.channel_number)
                     print('            volume:', channel.level)
                     print()
-            del volume
 
             print()
+        print('        properties:')
+
+        for k in endpoint.property_keys:
+            value = k.get(endpoint)
+            print('            key:', k)
+            print('            value:', value)
+            print()
+
 
             # If you want to change the session (application) endpoint
             # this is how you would go about doing it
@@ -281,10 +503,6 @@ for device in devices():
             #             print('session.default_endpoint == edpt:', session.default_endpoint == edpt)
             #
             #         del edpt
-
-            del session
-
-        del endpoint
 
     print('    connectors:')
 
@@ -301,8 +519,6 @@ for device in devices():
             print('           ', interface.name)
         print()
 
-        del connector
-
     print('    subunits:')
     for subunit in device.subunits:
         part = subunit.part
@@ -314,17 +530,32 @@ for device in devices():
             print('           ', interface.name)
         print()
 
-        del subunit
 
-    del device
+import signal as sig
+import time
 
 
-event = threading.Event()
+class ServiceExit(Exception):
+    """
+    Custom exception which is used to trigger the clean exit
+    of all running threads and the main program.
+    """
+    pass
+
+
+def service_shutdown(signum, frame):
+    print('Caught signal %d' % signum)
+    raise ServiceExit
+
+
+sig.signal(sig.SIGTERM, service_shutdown)
+sig.signal(sig.SIGINT, service_shutdown)
 
 try:
-    event.wait()
+    while True:
+        time.sleep(0.5)
 
-except KeyboardInterrupt:
+except ServiceExit:
     pass
 
 _on_device_added.unregister()
@@ -345,5 +576,5 @@ _on_session_state_changed.unregister()
 _on_session_channel_volume_changed.unregister()
 _on_part_changed.unregister()
 
-pyWinCoreAudio.stop()
+pyWinCoreAudio.unload()
 

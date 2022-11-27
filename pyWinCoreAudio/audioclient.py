@@ -25,6 +25,7 @@ from .mmdeviceapi import (
     IID_IActivateAudioInterfaceAsyncOperation,
     IID_IActivateAudioInterfaceCompletionHandler,
 )
+from .mmreg import PWAVEFORMATEX
 
 
 IID_IAudioCaptureClient = IID(
@@ -78,21 +79,6 @@ class AUDCLNT_STREAMOPTIONS(ENUM):
 
 
 PAUDCLNT_STREAMOPTIONS = POINTER(AUDCLNT_STREAMOPTIONS)
-
-
-class WAVEFORMATEX(ctypes.Structure):
-    _fields_ = [
-        ('wFormatTag', WORD),
-        ('nChannels', WORD),
-        ('nSamplesPerSec', WORD),
-        ('nAvgBytesPerSec', WORD),
-        ('nBlockAlign', WORD),
-        ('wBitsPerSample', WORD),
-        ('cbSize', WORD),
-    ]
-
-
-PWAVEFORMATEX = POINTER(WAVEFORMATEX)
 
 
 class AudioClientProperties(ctypes.Structure):

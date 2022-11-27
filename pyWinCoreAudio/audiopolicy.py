@@ -19,6 +19,8 @@
 from .data_types import *
 import comtypes
 from . import utils
+from typing import Union, Generator
+
 from .mmdeviceapi import IMMDevice,  ERole, EDataFlow
 from .audioclient import PISimpleAudioVolume, ISimpleAudioVolume
 from .policyconfig import PolicyConfigClient
@@ -317,7 +319,11 @@ class IAudioSessionControl(comtypes.IUnknown):
         self._volume = None
         comtypes.IUnknown.__init__(self)
 
-    def __call__(self, endpoint, session_manager):
+    def __call__(
+        self,
+        endpoint: IMMDevice,
+        session_manager: Union["IAudioSessionManager", "IAudioSessionManager2"]
+    ) -> "IAudioSessionControl":
         self._endpoint = endpoint
         self._session_manager = session_manager
 
@@ -342,7 +348,7 @@ class IAudioSessionControl(comtypes.IUnknown):
         return AudioSessionState.get(state)
 
     @property
-    def session_manager(self):
+    def session_manager(self) -> Union["IAudioSessionManager", "IAudioSessionManager2"]:
         return self._session_manager
 
     @property
@@ -353,7 +359,7 @@ class IAudioSessionControl(comtypes.IUnknown):
         return self._endpoint
 
     @endpoint.setter
-    def endpoint(self, endpt):
+    def endpoint(self, endpt: IMMDevice):
         pass
 
     @property
@@ -366,7 +372,7 @@ class IAudioSessionControl(comtypes.IUnknown):
         return utils.convert_to_string(data)
 
     @icon_path.setter
-    def icon_path(self, value):
+    def icon_path(self, value: str):
         raise NotImplementedError
 
     @property
@@ -405,7 +411,7 @@ class IAudioSessionControl(comtypes.IUnknown):
         return name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str):
         raise NotImplementedError
 
     @property
@@ -442,7 +448,7 @@ class IAudioSessionControl(comtypes.IUnknown):
         raise NotImplementedError
 
     @property
-    def volume(self):
+    def volume(self) -> ISimpleAudioVolume:
         if self._volume is None:
             vol = self.QueryInterface(ISimpleAudioVolume)
             if vol:
@@ -525,7 +531,7 @@ class IAudioSessionEnumerator(comtypes.IUnknown):
         )
     )
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Union[IAudioSessionControl, "IAudioSessionControl2"], None, None]:
         # noinspection PyUnresolvedReferences
         count = self.GetCount()
 
@@ -594,7 +600,7 @@ class IAudioSessionControl2(IAudioSessionControl):
     )
 
     @property
-    def endpoint(self):
+    def endpoint(self) -> IMMDevice:
         return self._endpoint
 
     @property
@@ -626,9 +632,9 @@ class IAudioSessionControl2(IAudioSessionControl):
         if self._endpoint.id in endpoint_ids:
             return self._endpoint
 
-        from . import devices
+        import pyWinCoreAudio
 
-        for device in devices(False)():
+        for device in pyWinCoreAudio:
             for endpoint in device:
                 if endpoint.id in endpoint_ids:
                     self._endpoint = endpoint
@@ -715,7 +721,11 @@ class IAudioSessionControl2(IAudioSessionControl):
         IAudioSessionControl.__init__(self)
         self._vol_duck = None
 
-    def __call__(self, endpoint, session_manager):
+    def __call__(
+        self,
+        endpoint: IMMDevice,
+        session_manager: Union["IAudioSessionManager", "IAudioSessionManager2"]
+    ) -> "IAudioSessionControl2":
         IAudioSessionControl.__call__(self, endpoint, session_manager)
 
         self._vol_duck = IAudioVolumeDuckNotification(endpoint)
@@ -765,7 +775,7 @@ class IAudioSessionManager(comtypes.IUnknown):
         self._endpoint = None
         comtypes.IUnknown.__init__(self)
 
-    def __call__(self, endpoint):
+    def __call__(self, endpoint: IMMDevice) -> "IAudioSessionManager":
         self._endpoint = endpoint
         return self
 
@@ -876,7 +886,7 @@ class IAudioSessionManager2(IAudioSessionManager):
         self._endpoint = None
         self.__sessions = {}
 
-    def __call__(self, endpoint):
+    def __call__(self, endpoint: IMMDevice) -> "IAudioSessionManager2":
         self._endpoint = endpoint
         self.__session_notification = IAudioSessionNotification(self, endpoint)
 
@@ -895,7 +905,7 @@ class IAudioSessionManager2(IAudioSessionManager):
 
         self.__sessions.clear()
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Union[IAudioSessionControl, IAudioSessionControl2], None, None]:
         """
         Get sessions
         """

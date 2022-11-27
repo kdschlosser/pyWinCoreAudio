@@ -20,7 +20,7 @@ from .data_types import *
 import ctypes
 import comtypes
 from comtypes import CoClass
-from typing import Union
+from typing import List, Union, Optional, Generator, Any, TYPE_CHECKING
 from . import utils
 from .ksproxy import IKsControl
 from .endpointvolumeapi import (
@@ -49,6 +49,11 @@ from .dsound import (
 from .propsys import (
     PROPERTYKEY,
     PIPropertyStore
+)
+
+from .propkey import (
+    PKEY_Devices_AudioDevice_RawProcessingSupported,
+    PKEY_Devices_AudioDevice_SpeechProcessingSupported
 )
 
 from .propidl import PPROPVARIANT
@@ -119,6 +124,9 @@ from .ksmedia import (
     KSJACK_SINK_INFORMATION,
     KSNODETYPE
 )
+
+if TYPE_CHECKING:
+    from .audiopolicy import IAudioSessionControl, IAudioSessionControl2
 
 
 IID_IMMDeviceCollection = IID(
@@ -262,20 +270,6 @@ PKEY_AudioEndpoint_FormFactor = DEFINE_PROPERTYKEY(
     0
 )
 
-PKEY_AudioEndpoint_PhysicalSpeakers = DEFINE_PROPERTYKEY(
-    0x1da5d803,
-    0xd492,
-    0x4edd,
-    0x8c,
-    0x23,
-    0xe0,
-    0xc0,
-    0xff,
-    0xee,
-    0x7f,
-    0x0e,
-    3
-)
 
 PKEY_AudioEndpoint_GUID = DEFINE_PROPERTYKEY(
     0x1da5d803,
@@ -310,7 +304,98 @@ PKEY_AudioEndpoint_Disable_SysFx = DEFINE_PROPERTYKEY(
 ENDPOINT_SYSFX_ENABLED = 0x00000000  # System Effects are enabled.
 ENDPOINT_SYSFX_DISABLED = 0x00000001  # System Effects are disabled.
 
-PKEY_AudioEndpoint_FullRangeSpeakers = DEFINE_PROPERTYKEY(
+
+class SpeakerBase(PK):
+
+    def __init__(self, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8, key):
+        guid = GUID(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8)
+        super().__init__(guid, key)
+
+    def decode(self, endpoint, data):
+        from .ksmedia import (
+            SPEAKER_TOP_FRONT_LEFT,
+            SPEAKER_FRONT_LEFT,
+            SPEAKER_TOP_FRONT_RIGHT,
+            SPEAKER_FRONT_RIGHT,
+            SPEAKER_TOP_FRONT_CENTER,
+            SPEAKER_FRONT_CENTER,
+            SPEAKER_LOW_FREQUENCY,
+            SPEAKER_TOP_BACK_LEFT,
+            SPEAKER_BACK_LEFT,
+            SPEAKER_BACK_CENTER,
+            SPEAKER_BACK_RIGHT,
+            SPEAKER_TOP_BACK_RIGHT,
+            SPEAKER_SIDE_LEFT,
+            SPEAKER_TOP_CENTER,
+            SPEAKER_SIDE_RIGHT,
+            SPEAKER_TOP_BACK_CENTER,
+            SPEAKER_FRONT_LEFT_OF_CENTER,
+            SPEAKER_FRONT_RIGHT_OF_CENTER
+        )
+
+        if data is None:
+            data = {
+                SPEAKER_TOP_FRONT_LEFT: False,
+                SPEAKER_FRONT_LEFT: False,
+                SPEAKER_TOP_FRONT_RIGHT: False,
+                SPEAKER_FRONT_RIGHT: False,
+                SPEAKER_TOP_FRONT_CENTER: False,
+                SPEAKER_FRONT_CENTER: False,
+                SPEAKER_LOW_FREQUENCY: False,
+                SPEAKER_TOP_BACK_LEFT: False,
+                SPEAKER_BACK_LEFT: False,
+                SPEAKER_BACK_CENTER: False,
+                SPEAKER_BACK_RIGHT: False,
+                SPEAKER_TOP_BACK_RIGHT: False,
+                SPEAKER_SIDE_LEFT: False,
+                SPEAKER_TOP_CENTER: False,
+                SPEAKER_SIDE_RIGHT: False,
+                SPEAKER_TOP_BACK_CENTER: False,
+                SPEAKER_FRONT_LEFT_OF_CENTER: False,
+                SPEAKER_FRONT_RIGHT_OF_CENTER: False
+            }
+        else:
+
+            data = {
+                SPEAKER_TOP_FRONT_LEFT: SPEAKER_TOP_FRONT_LEFT | data == data,
+                SPEAKER_FRONT_LEFT: SPEAKER_FRONT_LEFT | data == data,
+                SPEAKER_TOP_FRONT_RIGHT: SPEAKER_TOP_FRONT_RIGHT | data == data,
+                SPEAKER_FRONT_RIGHT: SPEAKER_FRONT_RIGHT | data == data,
+                SPEAKER_TOP_FRONT_CENTER: SPEAKER_TOP_FRONT_CENTER | data == data,
+                SPEAKER_FRONT_CENTER: SPEAKER_FRONT_CENTER | data == data,
+                SPEAKER_LOW_FREQUENCY: SPEAKER_LOW_FREQUENCY | data == data,
+                SPEAKER_TOP_BACK_LEFT: SPEAKER_TOP_BACK_LEFT | data == data,
+                SPEAKER_BACK_LEFT: SPEAKER_BACK_LEFT | data == data,
+                SPEAKER_BACK_CENTER: SPEAKER_BACK_CENTER | data == data,
+                SPEAKER_BACK_RIGHT: SPEAKER_BACK_RIGHT | data == data,
+                SPEAKER_TOP_BACK_RIGHT: SPEAKER_TOP_BACK_RIGHT | data == data,
+                SPEAKER_SIDE_LEFT: SPEAKER_SIDE_LEFT | data == data,
+                SPEAKER_TOP_CENTER: SPEAKER_TOP_CENTER | data == data,
+                SPEAKER_SIDE_RIGHT: SPEAKER_SIDE_RIGHT | data == data,
+                SPEAKER_TOP_BACK_CENTER: SPEAKER_TOP_BACK_CENTER | data == data,
+                SPEAKER_FRONT_LEFT_OF_CENTER: SPEAKER_FRONT_LEFT_OF_CENTER | data == data,
+                SPEAKER_FRONT_RIGHT_OF_CENTER: SPEAKER_FRONT_RIGHT_OF_CENTER | data == data
+            }
+
+        return data
+
+
+PKEY_AudioEndpoint_PhysicalSpeakers = SpeakerBase(
+    0x1da5d803,
+    0xd492,
+    0x4edd,
+    0x8c,
+    0x23,
+    0xe0,
+    0xc0,
+    0xff,
+    0xee,
+    0x7f,
+    0x0e,
+    3
+)
+
+PKEY_AudioEndpoint_FullRangeSpeakers = SpeakerBase(
     0x1da5d803,
     0xd492,
     0x4edd,
@@ -353,21 +438,6 @@ PKEY_AudioEndpoint_ControlPanelPageProvider = DEFINE_PROPERTYKEY(
     0x7f,
     0x0e,
     1
-)
-
-PKEY_AudioEndpoint_Association = DEFINE_PROPERTYKEY(
-    0x1da5d803,
-    0xd492,
-    0x4edd,
-    0x8c,
-    0x23,
-    0xe0,
-    0xc0,
-    0xff,
-    0xee,
-    0x7f,
-    0x0e,
-    2
 )
 
 PKEY_AudioEndpoint_Supports_EventDriven_Mode = DEFINE_PROPERTYKEY(
@@ -694,8 +764,9 @@ PKEY_AudioEngine_PhysicalSpeaker = DEFINE_PROPERTYKEY(
 )
 # VT: None
 
+
 # {1da5d803-d492-4edd-8c23-e0c0ffee7f0e}, 6
-PKEY_AudioEngine_FullRangeSpeaker = DEFINE_PROPERTYKEY(
+PKEY_AudioEngine_FullRangeSpeaker = SpeakerBase(
     0x1DA5D803,
     0xD492,
     0x4EDD,
@@ -1193,15 +1264,15 @@ class IMMNotificationClient(comtypes.COMObject):
 
             for device in self.__device_enum:
                 if device.id == dev_id:
-                    ON_DEVICE_PROPERTY_CHANGED.signal(device=device, key=k)
+                    ON_DEVICE_PROPERTY_CHANGED.signal(device, k)
                     break
 
                 for endpoint in device:
                     if endpoint.id == dev_id:
                         ON_DEVICE_PROPERTY_CHANGED.signal(
-                            device=device,
-                            endpoint=endpoint,
-                            key=k
+                            device,
+                            k,
+                            endpoint
                         )
                         break
                 else:
@@ -1621,11 +1692,11 @@ class EQBand(object):
         self.__device_enum = device_enum
 
     @property
-    def band(self):
+    def band(self) -> int:
         return self.__band
 
     @property
-    def frequency(self):
+    def frequency(self) -> int:
         return self.__frequency
 
     @property
@@ -1762,7 +1833,7 @@ class Equalizer(object):
         self.__device_enum = device_enum
 
     @property
-    def bands(self):
+    def bands(self) -> List[EQBand]:
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -1847,11 +1918,11 @@ class AudioChannel(object):
         self.__eq = None
 
     @property
-    def channel_num(self):
+    def channel_num(self) -> int:
         return self.__channel_num
 
     @property
-    def eq(self):
+    def eq(self) -> Equalizer:
         if self.__eq is None:
             self.__eq = Equalizer(
                 self.__channel_num,
@@ -1863,7 +1934,7 @@ class AudioChannel(object):
         return self.__eq
 
     @property
-    def bass_boost(self):
+    def bass_boost(self) -> bool:
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -1909,7 +1980,7 @@ class AudioChannel(object):
         return False
 
     @bass_boost.setter
-    def bass_boost(self, value):
+    def bass_boost(self, value: bool):
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -1951,7 +2022,7 @@ class AudioChannel(object):
             break
 
     @property
-    def loudness(self):
+    def loudness(self) -> bool:
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -1996,7 +2067,7 @@ class AudioChannel(object):
         return False
 
     @loudness.setter
-    def loudness(self, value):
+    def loudness(self, value: bool):
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -2038,7 +2109,7 @@ class AudioChannel(object):
             break
 
     @property
-    def automatic_gain_control(self):
+    def automatic_gain_control(self) -> bool:
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -2083,7 +2154,7 @@ class AudioChannel(object):
         return False
 
     @automatic_gain_control.setter
-    def automatic_gain_control(self, value):
+    def automatic_gain_control(self, value: bool):
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -2395,7 +2466,7 @@ class Device(object):
             continue
 
     @property
-    def connectors(self):
+    def connectors(self) -> List[IConnector]:
         res = []
         pCount = self.__device_topology.GetConnectorCount()
         for i in range(pCount):
@@ -2407,7 +2478,7 @@ class Device(object):
         return res
 
     @property
-    def subunits(self):
+    def subunits(self) -> List[ISubunit]:
         res = []
         pCount = self.__device_topology.GetSubunitCount()
 
@@ -2420,18 +2491,18 @@ class Device(object):
         return res
 
     @property
-    def name(self):
+    def name(self) -> str:
         for endpoint in self:
             return endpoint.device_name
 
     @property
-    def id(self):
+    def id(self) -> str:
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
         return device_id.rsplit('\\', 1)[0]
 
-    def __iter__(self):
+    def __iter__(self) -> Generator["IMMDevice", None, None]:
         endpoint_ids = []
         id_ = self.id
         # noinspection PyTypeChecker
@@ -2517,7 +2588,15 @@ class IMMDevice(comtypes.IUnknown):
         super(IMMDevice, self).__init__()
 
     @property
-    def audio_channels(self):
+    def raw_processing_supported(self) -> bool:
+        return self.get_property(PKEY_Devices_AudioDevice_RawProcessingSupported)
+
+    @property
+    def speech_processing_supported(self) -> bool:
+        return self.get_property(PKEY_Devices_AudioDevice_SpeechProcessingSupported)
+
+    @property
+    def audio_channels(self) -> List[AudioChannel]:
         channel_config = self.channel_config
         if channel_config is None:
             return []
@@ -2536,7 +2615,7 @@ class IMMDevice(comtypes.IUnknown):
         return res
 
     @property
-    def chorus(self):
+    def chorus(self) -> Chorus:
         if self.__chorus is None:
             self.__chorus = Chorus(
                 self,
@@ -2547,7 +2626,7 @@ class IMMDevice(comtypes.IUnknown):
         return self.__chorus
 
     @property
-    def reverb(self):
+    def reverb(self) -> Reverb:
         if self.__reverb is None:
             self.__reverb = Reverb(
                 self,
@@ -2558,7 +2637,7 @@ class IMMDevice(comtypes.IUnknown):
         return self.__reverb
 
     @property
-    def three_d(self):
+    def three_d(self) -> int:
         """
         DS3DALG_DEFAULT
         DS3DALG_NO_VIRTUALIZATION
@@ -2615,7 +2694,7 @@ class IMMDevice(comtypes.IUnknown):
         return
 
     @three_d.setter
-    def three_d(self, value):
+    def three_d(self, value: int):
         """
         DS3DALG_DEFAULT
         DS3DALG_NO_VIRTUALIZATION
@@ -2660,7 +2739,7 @@ class IMMDevice(comtypes.IUnknown):
             break
 
     @property
-    def acoustic_echo_cancel_mode(self):
+    def acoustic_echo_cancel_mode(self) -> int:
         """
         AEC_MODE_PASS_THROUGH
         AEC_MODE_HALF_DUPLEX
@@ -2715,7 +2794,7 @@ class IMMDevice(comtypes.IUnknown):
         return False
 
     @acoustic_echo_cancel_mode.setter
-    def acoustic_echo_cancel_mode(self, value):
+    def acoustic_echo_cancel_mode(self, value: int):
         """
         AEC_MODE_PASS_THROUGH
         AEC_MODE_HALF_DUPLEX
@@ -2759,7 +2838,7 @@ class IMMDevice(comtypes.IUnknown):
             break
 
     @property
-    def wideness(self):
+    def wideness(self) -> bool:
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -2802,7 +2881,7 @@ class IMMDevice(comtypes.IUnknown):
         return False
 
     @wideness.setter
-    def wideness(self, value):
+    def wideness(self, value: bool):
         data = self.__device_topology.GetDeviceId()
         device_id = utils.convert_to_string(data)
         _CoTaskMemFree(data)
@@ -2841,29 +2920,19 @@ class IMMDevice(comtypes.IUnknown):
             break
 
     @property
-    def device_name(self):
+    def device_name(self) -> str:
         """
         Name of the device this endpoint belongs to
         """
         return self.get_property(PKEY_DeviceInterface_FriendlyName)
 
-    def get_properties(self):
+    @property
+    def property_keys(self) -> Generator[PROPERTYKEY, None, None]:
         pStore = self.OpenPropertyStore(STGM_READ)
+        for key in pStore:
+            yield key
 
-        count = pStore.GetCount()
-
-        for i in range(count):
-            p_key = pStore.GetAt(i)
-            print(p_key)
-            try:
-                prop_var = self.get_property(p_key, True)
-                print('prop VT:', prop_var.vt)
-            except:
-                print('no read permissions')
-
-            print()
-
-    def get_property(self, key, propvar=False):
+    def get_property(self, key: PROPERTYKEY, propvar: bool = False) -> Any:
         """
         Internal Use
         """
@@ -2874,7 +2943,7 @@ class IMMDevice(comtypes.IUnknown):
         except comtypes.COMError:
             raise AttributeError
 
-    def set_property(self, key, value, vt=None):
+    def set_property(self, key: PROPERTYKEY, value: Any, vt: Optional[int]=None):
         """
         Internal use
         """
@@ -2921,7 +2990,7 @@ class IMMDevice(comtypes.IUnknown):
             return DEVICE_STATE_UNPLUGGED
 
     @property
-    def id(self):
+    def id(self) -> str:
         # noinspection PyUnresolvedReferences
         data = self.GetId()
         id_ = utils.convert_to_string(data)
@@ -2929,7 +2998,7 @@ class IMMDevice(comtypes.IUnknown):
         return id_
 
     @property
-    def audio_client(self):
+    def audio_client(self) -> IAudioClient:
         # noinspection PyTypeChecker
         audio_client = POINTER(IAudioClient)()
         self.activate(audio_client)
@@ -2947,7 +3016,7 @@ class IMMDevice(comtypes.IUnknown):
             return EDataFlow.get(endpoint.GetDataFlow().value)
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         Endpoints friendly name
         """
@@ -2955,7 +3024,7 @@ class IMMDevice(comtypes.IUnknown):
         return utils.convert_to_string(val)
 
     @property
-    def description(self):
+    def description(self) -> str:
         """
         Endpoints description
         """
@@ -2982,20 +3051,12 @@ class IMMDevice(comtypes.IUnknown):
         return value
 
     @property
-    def full_range_speakers(self) -> AudioSpeakers:
-        return AudioSpeakers(
-            self.get_property(PKEY_AudioEndpoint_FullRangeSpeakers)
-        )
-
-    @property
     def guid(self) -> GUID:
         return self.get_property(PKEY_AudioEndpoint_GUID)
 
     @property
-    def physical_speakers(self) -> AudioSpeakers:
-        return AudioSpeakers(
-            self.get_property(PKEY_AudioEndpoint_PhysicalSpeakers)
-        )
+    def speakers(self) -> AudioSpeakers:
+        return AudioSpeakers(self)
 
     @property
     def audio_enhancements_enabled(self) -> bool:
@@ -3113,7 +3174,7 @@ class IMMDevice(comtypes.IUnknown):
         return jd.is_connected
 
     @property
-    def jack_descriptions(self) -> list:
+    def jack_descriptions(self) -> List[JackDescription]:
         conn_to = self.connector.connected_to
         if conn_to is None:
             return []
@@ -3154,7 +3215,7 @@ class IMMDevice(comtypes.IUnknown):
             return sink_information.GetJackSinkInformation()
 
     @property
-    def has_audio(self):
+    def has_audio(self) -> bool:
         volume = self.volume
 
         if volume is None:
@@ -3277,7 +3338,7 @@ class IMMDevice(comtypes.IUnknown):
     def volume(self) -> IAudioEndpointVolumeEx:
         return self.__volume
 
-    def __call__(self, device, device_topology):
+    def __call__(self, device, device_topology) -> "IMMDevice":
         self.__device = device
         self.__device_topology = device_topology(endpoint=self)
         self.__chorus = None
@@ -3319,7 +3380,7 @@ class IMMDevice(comtypes.IUnknown):
         return connector(endpoint=self)
 
     @property
-    def subunits(self) -> list:
+    def subunits(self) -> List[ISubunit]:
         res = []
         pCount = self.__device_topology.GetSubunitCount()
 
@@ -3335,7 +3396,7 @@ class IMMDevice(comtypes.IUnknown):
     def device(self) -> Device:
         return self.__device
 
-    def set_default(self, role):
+    def set_default(self, role: Union[ERole, str]):
         policy_config = comtypes.CoCreateInstance(
             policyconfig.CLSID_PolicyConfigClient,
             policyconfig.IPolicyConfig,
@@ -3366,7 +3427,7 @@ class IMMDevice(comtypes.IUnknown):
             ERole.get(role)
         ) == self
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Union["IAudioSessionControl", "IAudioSessionControl2"], None, None]:
         """
         Sessions
         """

@@ -80,20 +80,32 @@ class SessionSignal(object):
         self._callbacks = {}
 
     def register(self, callback, device=None, endpoint=None, session=None):
-        if session is not None and endpoint is None:
-            raise ValueError('You must specify an endpoint if you are specifying a session')
 
-        if endpoint is not None and device is None:
-            raise ValueError('You must specify a device if you are specifying an endpoint')
-
-        if device is not None:
-            device = weakref.ref(device)
-
-        if endpoint is not None:
-            endpoint = weakref.ref(endpoint)
 
         if session is not None:
-            session = weakref.ref(session)
+            if endpoint is None:
+                endpoint = session.endpoint
+
+            if session.endpoint != endpoint:
+                raise ValueError(
+                    "session endpoint does not match supplied endpoint"
+                )
+
+        if endpoint is not None:
+            if device is None:
+                device = endpoint.device
+
+            if endpoint.device != device:
+                raise ValueError('endpoint device does not match supplied device')
+
+        if device is not None:
+            device = device.id
+
+        if endpoint is not None:
+            endpoint = endpoint.id
+
+        if session is not None:
+            session = session.id
 
         callback = weakref.ref(callback)
 
@@ -109,32 +121,27 @@ class SessionSignal(object):
                 del self._callbacks[key]
 
     def signal(self, device, endpoint, session, *args, **kwargs):
-
         for (wd, we, ws), wcb in list(self._callbacks.items())[:]:
             if wd is None:
-                d = device
+                d = device.id
             else:
-                d = wd()
+                d = wd
             if we is None:
-                e = endpoint
+                e = endpoint.id
             else:
-                e = we()
+                e = we
             if ws is None:
-                s = session
+                s = session.id
             else:
-                s = ws()
+                s = ws
 
-            if None in (d, e, s):
-                del self._callbacks[(wd, we, ws)]
-                continue
-
-            if d == device and e == endpoint and s == session:
+            if d == device.id and e == endpoint.id and s == session.id:
                 cb = wcb()
 
                 if cb is None:
                     del self._callbacks[(wd, we, ws)]
                 else:
-                    tw.add(cb, signal=self, device=device, endpoint=endpoint, session=session, *args, **kwargs)
+                    tw.add(cb, self, device, endpoint, session, *args, **kwargs)
 
 
 class EndpointSignal(object):
@@ -143,13 +150,20 @@ class EndpointSignal(object):
         self._callbacks = {}
 
     def register(self, callback, device=None, endpoint=None):
-        if endpoint is not None and device is None:
-            raise ValueError('You must specify a device if you are specifying an endpoint')
+        if endpoint is not None:
+
+            if device is None:
+                device = endpoint.device
+
+            if endpoint.device != device:
+                raise ValueError(
+                    'endpoint device does not match supplied device'
+                )
 
         if device is not None:
-            device = weakref.ref(device)
+            device = device.id
         if endpoint is not None:
-            endpoint = weakref.ref(endpoint)
+            endpoint = endpoint.id
 
         callback = weakref.ref(callback)
 
@@ -168,25 +182,21 @@ class EndpointSignal(object):
     def signal(self, device, endpoint=None, *args, **kwargs):
         for (wd, we), wcb in list(self._callbacks.items())[:]:
             if wd is None:
-                d = device
+                d = device.id
             else:
-                d = wd()
+                d = wd
             if we is None:
-                e = endpoint
+                e = endpoint.id
             else:
-                e = we()
+                e = we
 
-            if d is None:
-                del self._callbacks[(wd, we)]
-                continue
-
-            if d == device and (e is None or e == endpoint):
+            if d == device.id and e == endpoint.id:
                 cb = wcb()
 
                 if cb is None:
                     del self._callbacks[(wd, we)]
                 else:
-                    tw.add(cb, signal=self, device=device, endpoint=endpoint, *args, **kwargs)
+                    tw.add(cb, self, device, endpoint, *args, **kwargs)
 
 
 class DeviceSignal(object):
@@ -197,7 +207,7 @@ class DeviceSignal(object):
     def register(self, callback, device=None):
 
         if device is not None:
-            device = weakref.ref(device)
+            device = device.id
 
         callback = weakref.ref(callback)
 
@@ -215,21 +225,17 @@ class DeviceSignal(object):
     def signal(self, device, *args, **kwargs):
         for wd, wcb in list(self._callbacks.items())[:]:
             if wd is None:
-                d = device
+                d = device.id
             else:
-                d = wd()
+                d = wd
 
-            if d is None:
-                del self._callbacks[wd]
-                continue
-
-            if d == device:
+            if d == device.id:
                 cb = wcb()
 
                 if cb is None:
                     del self._callbacks[wd]
                 else:
-                    tw.add(cb, signal=self, device=device, *args, **kwargs)
+                    tw.add(cb, self, device, *args, **kwargs)
 
 
 class InterfaceSignal(object):
@@ -238,18 +244,30 @@ class InterfaceSignal(object):
         self._callbacks = {}
 
     def register(self, callback, device=None, endpoint=None, interface=None):
-        if interface is not None and endpoint is None:
-            raise ValueError('You must specify an endpoint if you are specifying an interface')
+        if interface is not None:
+            if endpoint is None:
+                endpoint = interface.endpoint
 
-        if endpoint is not None and device is None:
-            raise ValueError('You must specify a device if you are specifying an endpoint')
+            if interface.endpoint != endpoint:
+                raise ValueError(
+                    'interface endpoint does not match supplied endpoint'
+                )
+
+        if endpoint is not None:
+            if device is None:
+                device = endpoint.device
+
+            if endpoint.device != device:
+                raise ValueError(
+                    'endpoint device does not match supplied device'
+                )
 
         if device is not None:
-            device = weakref.ref(device)
+            device = device.id
         if endpoint is not None:
-            endpoint = weakref.ref(endpoint)
+            endpoint = endpoint.id
         if interface is not None:
-            interface = weakref.ref(interface)
+            interface = interface.global_id
 
         callback = weakref.ref(callback)
 
@@ -267,29 +285,25 @@ class InterfaceSignal(object):
     def signal(self, device, endpoint, interface, *args, **kwargs):
         for (wd, we, wi), wcb in list(self._callbacks.items()):
             if wd is None:
-                d = device
+                d = device.id
             else:
-                d = wd()
+                d = wd
             if we is None:
-                e = endpoint
+                e = endpoint.id
             else:
-                e = we()
+                e = we.id
             if wi is None:
-                i = interface
+                i = interface.global_id
             else:
-                i = wi()
+                i = wi
 
-            if None in (d, e, i):
-                del self._callbacks[(wd, we, wi)]
-                continue
-
-            if d == device and e == endpoint and i == interface:
+            if d == device.id and e == endpoint.id and i == interface.global_id:
                 cb = wcb()
 
                 if cb is None:
                     del self._callbacks[(wd, we, wi)]
                 else:
-                    tw.add(cb, signal=self, device=device, endpoint=endpoint, interface=interface, *args, **kwargs)
+                    tw.add(cb, self, device, endpoint, interface, *args, **kwargs)
 
 
 class SignalThreadWorker(object):
@@ -316,7 +330,7 @@ class SignalThreadWorker(object):
 
                     try:
                         func(*args, **kwargs)
-                    except:
+                    except:  # NOQA
                         traceback.print_exc()
             else:
                 self._exit_event.set()

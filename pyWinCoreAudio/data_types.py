@@ -23,7 +23,7 @@ import comtypes
 
 COMMETHOD = comtypes.COMMETHOD
 POINTER = ctypes.POINTER
-VARIANT = comtypes.automation.VARIANT
+# VARIANT = comtypes.automation.VARIANT
 VARTYPE = comtypes.automation.VARTYPE
 LPVARTYPE = POINTER(VARTYPE)
 
@@ -81,6 +81,9 @@ LPFLOAT = POINTER(FLOAT)
 DOUBLE = ctypes.c_double
 
 HANDLE = ctypes.c_void_p
+HWND = HANDLE
+HINSTANCE = HANDLE
+HKEY = HANDLE
 HRESULT = ctypes.c_long
 LPHRESULT = POINTER(HRESULT)
 
@@ -284,15 +287,6 @@ class HSTRING_HEADER(ctypes.Structure):
     ]
 
 
-class _FILETIME(ctypes.Structure):
-    _fields_ = [
-        ('dwLowDateTime', DWORD),
-        ('dwHighDateTime', DWORD)
-    ]
-
-
-FILETIME = _FILETIME
-
 
 class _LARGE_INTEGER(ctypes.Structure):
     class union(ctypes.Union):
@@ -305,11 +299,21 @@ class _LARGE_INTEGER(ctypes.Structure):
         _anonymous_ = ('struct',)
         _fields_ = [
             ('struct', struct),
-            ('QuadPart', INT64)
+            ('QuadPart', LONGLONG)
         ]
 
     _anonymous_ = ('union',)
     _fields_ = [('union', union)]
+
+    @property
+    def value(self):
+        return self.HighPart << 32 | self.LowPart
+
+    @value.setter
+    def value(self, num):
+        self.HighPart = num >> 32 & 0xFFFFFFFF
+        self.LowPart = num & 0xFFFFFFFF
+        self.QuadPart = num
 
 
 LARGE_INTEGER = _LARGE_INTEGER
@@ -326,14 +330,105 @@ class _ULARGE_INTEGER(ctypes.Structure):
         _anonymous_ = ('struct',)
         _fields_ = [
             ('struct', struct),
-            ('QuadPart', UINT64)
+            ('QuadPart', ULONGLONG)
         ]
 
     _anonymous_ = ('union',)
     _fields_ = [('union', union)]
 
+    @property
+    def value(self):
+        return self.HighPart << 32 | self.LowPart
+
+    @value.setter
+    def value(self, num):
+        self.HighPart = num >> 32 & 0xFFFFFFFF
+        self.LowPart = num & 0xFFFFFFFF
+        self.QuadPart = num
+
 
 ULARGE_INTEGER = _ULARGE_INTEGER
+
+
+_FileTimeToSystemTime = ctypes.windll.kernel32.FileTimeToSystemTime
+_FileTimeToSystemTime.restype = BOOL
+
+_SystemTimeToFileTime = ctypes.windll.kernel32.SystemTimeToFileTime
+_SystemTimeToFileTime.restype = BOOL
+
+
+class _FILETIME(ctypes.Structure):
+    _fields_ = [
+        ('dwLowDateTime', DWORD),
+        ('dwHighDateTime', DWORD)
+    ]
+
+    @property
+    def value(self):
+        system_time = SYSTEMTIME()
+        _FileTimeToSystemTime(ctypes.byref(self), ctypes.byref(system_time))
+        return system_time.value
+
+    @value.setter
+    def value(self, dt):
+        system_time = SYSTEMTIME()
+        system_time.value = dt
+        _SystemTimeToFileTime(ctypes.byref(system_time), ctypes.byref(self))
+
+
+FILETIME = _FILETIME
+
+import datetime
+
+
+class _SYSTEMTIME(ctypes.Structure):
+    _fields_ = [
+        ('wYear', WORD),
+        ('wMonth', WORD),
+        ('wDayOfWeek', WORD),
+        ('wDay', WORD),
+        ('wHour', WORD),
+        ('wMinute', WORD),
+        ('wSecond', WORD),
+        ('wMilliseconds', WORD),
+    ]
+
+    @property
+    def value(self):
+        dt = datetime.datetime(
+            year=self.wYear,
+            month=self.wMonth,
+            day=self.wDay,
+            hour=self.wHour,
+            minute=self.wMinute,
+            second=self.wSecond,
+            microsecond=self.wMilliseconds * 1000
+        )
+
+        return dt
+
+    @value.setter
+    def value(self, dt):
+        if isinstance(dt, (int, float)):
+            dt = datetime.datetime.fromtimestamp(dt)
+
+        weekday = dt.weekday() + 1
+        if weekday == 7:
+            weekday = 0
+
+        self.wYear = dt.year
+        self.wMonth = dt.month
+        self.wDayOfWeek = weekday
+        self.wDay = dt.day
+        self.wHour = dt.hour
+        self.wMinute = dt.minute
+        self.wSecond = dt.second
+        self.wMilliseconds = int(dt.microsecond / 1000)
+
+
+SYSTEMTIME = _SYSTEMTIME
+PSYSTEMTIME = POINTER(_SYSTEMTIME)
+LPSYSTEMTIME = POINTER(_SYSTEMTIME)
 
 
 # the following code is something I will usually avoid

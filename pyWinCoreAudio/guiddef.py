@@ -251,6 +251,21 @@ class _tagPROPERTYKEY(ctypes.Structure, metaclass=PropertyKeyMeta):
 
         return 'PROPERTYKEY(' + str(self.fmtid) + ', ' + str(self.pid) + ')'
 
+    def get(self, endpoint):
+        key = (str(self.fmtid), self.pid)
+
+        if key in self._keys:
+            key = self._keys[key]
+        else:
+            key = self
+
+        data = endpoint.get_property(key)
+        data = key.decode(endpoint, data)
+        return data
+
+    def decode(self, endpoint, data):
+        return data
+
 
 PROPERTYKEY = _tagPROPERTYKEY
 PPROPERTYKEY = ctypes.POINTER(PROPERTYKEY)
